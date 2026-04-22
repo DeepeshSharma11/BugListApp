@@ -16,6 +16,14 @@ export default {
     }
     
     // For all other requests, serve the static assets (React app)
-    return env.ASSETS.fetch(request);
+    let response = await env.ASSETS.fetch(request);
+    
+    // If the asset is not found (e.g. user refreshed on /dashboard), serve index.html for React Router
+    if (response.status === 404) {
+      const indexRequest = new Request(new URL('/', request.url), request);
+      response = await env.ASSETS.fetch(indexRequest);
+    }
+    
+    return response;
   }
 };
