@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 
@@ -264,6 +265,28 @@ export default function AdminDashboard() {
     )
   }
 
+  function handleOpenUserSelector() {
+    setError(null)
+    setSuccess(null)
+
+    if (!teams.length) {
+      setError('Pehle ek team create karo, uske baad user selector khulega.')
+      return
+    }
+
+    if (!selectedTeamId) {
+      setError('Pehle dropdown se team select karo.')
+      return
+    }
+
+    if (!users.length) {
+      setError('Abhi users load nahi hue. Profiles RLS/policies check karo.')
+      return
+    }
+
+    setIsModalOpen(true)
+  }
+
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -378,8 +401,7 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
-                disabled={!teams.length}
+                onClick={handleOpenUserSelector}
                 className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Open User Selector
@@ -549,7 +571,8 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {isModalOpen && (
+      {isModalOpen &&
+        createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
           <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
@@ -640,7 +663,8 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
