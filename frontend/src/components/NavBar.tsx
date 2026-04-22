@@ -99,7 +99,7 @@ export default function NavBar() {
   ];
 
   const navLinks = isAdmin 
-    ? [...baseNavLinks, { name: 'Admin', path: '/admin' }]
+    ? [...baseNavLinks, { name: 'Admin', path: '/admin' }, { name: 'Support Tickets', path: '/admin/support' }]
     : baseNavLinks;
 
   return (

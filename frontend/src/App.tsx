@@ -10,6 +10,7 @@ import BugDetail from './pages/dashboard/BugDetail'
 import Profile from './pages/dashboard/Profile'
 import Notifications from './pages/dashboard/Notifications'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminSupport from './pages/admin/AdminSupport'
 
 // Auth Pages
 import Login from './pages/auth/Login'
@@ -51,6 +52,7 @@ export default function App() {
           
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/support" element={<AdminSupport />} />
           </Route>
         </Route>
       </Route>

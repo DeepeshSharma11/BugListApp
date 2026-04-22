@@ -10,11 +10,19 @@ from pydantic import BaseModel, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import aiosmtplib
+from email.message import EmailMessage
+
 class SupportTicketRequest(BaseModel):
     user_id: Optional[str] = None
     user_email: str
     subject: str
     message: str
+
+class SupportReplyRequest(BaseModel):
+    reply: str
+    status: str
+
 from dotenv import load_dotenv
 from supabase import create_client
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -510,4 +518,87 @@ def create_support_ticket(request: Request, ticket: SupportTicketRequest):
         return {"status": "success", "message": "Ticket submitted successfully"}
     except Exception as e:
         logger.exception("Error creating support ticket")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/admin/support")
+def get_support_tickets(request: Request):
+    admin_secret = request.headers.get("x-admin-secret")
+    if not admin_secret or admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        res = sb.table("support_tickets").select("*").order("created_at", desc=True).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=500, detail="Database error")
+        return getattr(res, "data", [])
+    except Exception as e:
+        logger.exception("Error fetching support tickets")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/admin/support/{ticket_id}/reply")
+async def reply_support_ticket(request: Request, ticket_id: str, reply_data: SupportReplyRequest):
+    admin_secret = request.headers.get("x-admin-secret")
+    if not admin_secret or admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        # First get the ticket to get user's email and subject
+        res = sb.table("support_tickets").select("*").eq("id", ticket_id).execute()
+        if getattr(res, "error", None) or not getattr(res, "data", []):
+            raise HTTPException(status_code=404, detail="Ticket not found")
+            
+        ticket = res.data[0]
+        user_email = ticket["user_email"]
+        subject = ticket["subject"]
+
+        # Send email via SMTP
+        msg = EmailMessage()
+        msg["From"] = "BugTracker Support <akshatgupta1452@gmail.com>"
+        msg["To"] = user_email
+        msg["Subject"] = f"Re: {subject} (BugTracker Support)"
+        
+        email_body = f"""Hello,
+
+Thank you for reaching out to BugTracker Support.
+
+Regarding your ticket "{subject}":
+{reply_data.reply}
+
+Best regards,
+The BugTracker Team
+"""
+        msg.set_content(email_body)
+
+        try:
+            await aiosmtplib.send(
+                msg,
+                hostname="smtp.gmail.com",
+                port=587,
+                start_tls=True,
+                username="akshatgupta1452@gmail.com",
+                password="tjzf zejf wkhv qvnt"
+            )
+            logger.info(f"Reply email sent successfully to {user_email}")
+        except Exception as e:
+            logger.error(f"Failed to send email to {user_email}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send email reply")
+
+        # Update ticket in database
+        import datetime
+        update_res = sb.table("support_tickets").update({
+            "status": reply_data.status,
+            "message": ticket["message"] + f"\n\n--- Admin Reply ---\n{reply_data.reply}", # Append reply since we don't have a separate column
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }).eq("id", ticket_id).execute()
+
+        if getattr(update_res, "error", None):
+            logger.error(f"Failed to update ticket {ticket_id}: {update_res.error}")
+            raise HTTPException(status_code=500, detail="Failed to update ticket status")
+
+        return {"status": "success", "message": "Reply sent successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error processing reply for ticket {ticket_id}")
         raise HTTPException(status_code=500, detail="Internal server error")
