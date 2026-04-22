@@ -28,7 +28,11 @@ export default function Signup() {
     });
 
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes('already registered')) {
+        setError('You are already registered, please login.');
+      } else {
+        setError(error.message);
+      }
     } else {
       setMessage('Check your email for the confirmation link.');
     }
