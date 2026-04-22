@@ -1,9 +1,34 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+    setIsOpen(false);
+  };
 
   const navLinks = [
     { name: 'Submit', path: '/dashboard/submit' },
@@ -30,21 +55,42 @@ export default function NavBar() {
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-1 lg:gap-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.path}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  location.pathname.startsWith(link.path)
-                    ? 'bg-blue-50 text-blue-700 shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </nav>
+          <div className="hidden md:flex items-center">
+            <nav className="flex gap-1 lg:gap-2 mr-4">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname.startsWith(link.path)
+                      ? 'bg-blue-50 text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
+            
+            {/* Auth Actions (Reduced CTA) */}
+            <div className="flex items-center pl-4 border-l border-gray-200">
+              {session ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  Log out
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  Log in
+                </Link>
+              )}
+            </div>
+          </div>
 
           {/* Mobile menu button */}
           <div className="flex md:hidden items-center">
@@ -83,6 +129,25 @@ export default function NavBar() {
                 {link.name}
               </Link>
             ))}
+            
+            <div className="border-t border-gray-100 mt-2 pt-2">
+              {session ? (
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                  Log out
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="block w-full text-left px-4 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                  Log in
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

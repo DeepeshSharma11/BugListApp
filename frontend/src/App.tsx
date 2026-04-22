@@ -8,9 +8,20 @@ import BugDetail from './pages/dashboard/BugDetail'
 import Profile from './pages/dashboard/Profile'
 import AdminDashboard from './pages/admin/AdminDashboard'
 
+// Auth Pages
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import ResetPassword from './pages/auth/ResetPassword'
+
 export default function App() {
   return (
     <Routes>
+      {/* Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Main App Routes */}
       <Route path="/" element={<Navigate to="/dashboard" />} />
       <Route path="/" element={<Layout />}>
         <Route path="dashboard">
