@@ -384,7 +384,7 @@ export default function SubmitPage() {
         <button
           type="submit"
           disabled={submitting || !profileReady}
-          className="rounded-xl bg-blue-600 px-8 py-3.5 text-white font-bold shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-lg disabled:hover:bg-blue-600"
+          className="rounded-xl bg-blue-600 px-8 py-3.5 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {submitting ? 'Submitting...' : 'Submit Bug'}
         </button>
@@ -416,7 +416,7 @@ export default function SubmitPage() {
             .map((b) => (
               <a
                 key={b.id}
-                className="card block hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
+                className="card block hover:opacity-80 transition-opacity group"
                 href={`/dashboard/bugs/${b.id}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

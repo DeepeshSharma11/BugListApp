@@ -165,7 +165,7 @@ export default function Notifications() {
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`card hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group ${
+            className={`card hover:opacity-80 transition-opacity group ${
               !notification.is_read
                 ? 'border-blue-300 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
                 : ''

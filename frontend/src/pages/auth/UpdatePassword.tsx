@@ -50,14 +50,10 @@ export default function UpdatePassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 py-12 px-4 relative overflow-hidden">
-      {/* Decorative orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] mix-blend-screen pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px] mix-blend-screen pointer-events-none" />
-
-      <div className="max-w-md w-full space-y-8 bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 z-10">
+    <div className="min-h-screen flex items-center justify-center bg-indigo-950 py-12 px-4">
+      <div className="max-w-md w-full space-y-8 bg-white/10 p-10 rounded-3xl shadow-lg border border-white/20">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/30 mb-6 hover:scale-105 transition-transform duration-300">
+          <div className="mx-auto w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mb-6">
             BT
           </div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">Set New Password</h2>
@@ -76,7 +72,7 @@ export default function UpdatePassword() {
         ) : (
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm backdrop-blur-sm">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm">
                 {error}
               </div>
             )}
@@ -117,7 +113,7 @@ export default function UpdatePassword() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-indigo-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

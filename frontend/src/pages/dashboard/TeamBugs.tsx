@@ -145,7 +145,7 @@ export default function TeamBugs() {
 
         <div className="mt-6 space-y-4">
           {bugs.map((b) => (
-            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="card block hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="card block hover:opacity-80 transition-opacity group">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{b.title}</div>
