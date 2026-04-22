@@ -11,7 +11,7 @@ export default {
       
       // We create a new request with the updated URL
       // This happens on Cloudflare's servers, so no Mixed Content error in the browser!
-      const newRequest = new Request(targetUrl.toString(), new Request(request));
+      const newRequest = new Request(targetUrl.toString(), request);
       return fetch(newRequest);
     }
     
