@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { supabase } from '../../lib/supabaseClient'
 import { getAuthState } from '../../lib/auth'
@@ -27,6 +28,12 @@ export default function SubmitPage() {
   const [description, setDescription] = useState('')
   const [environment, setEnvironment] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [category, setCategory] = useState('')
+  const [customCategory, setCustomCategory] = useState('')
+  const [myBugs, setMyBugs] = useState<any[]>([])
+  const [myPage, setMyPage] = useState(1)
+  const myPerPage = 5
+  const [query, setQuery] = useState('')
   const [duplicate, setDuplicate] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -57,6 +64,39 @@ export default function SubmitPage() {
 
     void loadProfile()
   }, [])
+
+  // Prefill from query params (e.g., /dashboard/submit?category=navbar-bug&customCategory=typo)
+  const location = useLocation()
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const cat = params.get('category') || ''
+    const custom = params.get('customCategory') || params.get('custom') || ''
+    if (custom) {
+      setCustomCategory(custom)
+    } else if (cat) {
+      setCategory(cat)
+    }
+  }, [location.search])
+
+  useEffect(() => {
+    // load my bugs after profile is ready
+    if (!profileReady || !submittedBy) return
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/bugs?submitted_by=${encodeURIComponent(submittedBy)}&page=${myPage}&per_page=${myPerPage}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted) setMyBugs(data.items || [])
+      } catch (e) {
+        console.error('Failed to load my bugs', e)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [profileReady, submittedBy, myPage])
 
   useEffect(() => {
     if (!debouncedTitle || description.trim().length < 5) {
@@ -119,6 +159,11 @@ export default function SubmitPage() {
       body.append('environment', environment)
       body.append('submitted_by', submittedBy)
       body.append('team_id', teamId)
+      // send category/customCategory as tags (no DB schema change required)
+      const tagsParts: string[] = []
+      if (category && category.trim() && category !== '__custom__') tagsParts.push(category.trim())
+      if (customCategory && customCategory.trim()) tagsParts.push(customCategory.trim())
+      if (tagsParts.length) body.append('tags', tagsParts.join(','))
 
       const res = await fetch('/api/bugs/', { method: 'POST', body })
 
@@ -196,6 +241,8 @@ export default function SubmitPage() {
       setTitle('')
       setDescription('')
       setEnvironment('')
+      setCategory('')
+      setCustomCategory('')
       setFiles([])
       setDuplicate(null)
       alert(`Bug submitted successfully: ${bugId}`)
@@ -271,6 +318,33 @@ export default function SubmitPage() {
         />
       </Field>
 
+      <Field label="Category">
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full rounded-md border p-2"
+        >
+          <option value="">Select category (optional)</option>
+          <option value="dashboard-bug">Dashboard bug</option>
+          <option value="navbar-bug">NavBar bug</option>
+          <option value="footer-bug">Footer bug</option>
+          <option value="ui-bug">UI bug</option>
+          <option value="performance">Performance</option>
+          <option value="__custom__">Custom...</option>
+        </select>
+      </Field>
+
+      {(category === '__custom__' || customCategory) && (
+        <Field label="Custom category" helperText="Optional — will be saved as a tag">
+          <input
+            value={customCategory}
+            onChange={(e) => setCustomCategory(e.target.value)}
+            className="w-full rounded-md border p-2"
+            placeholder="Enter custom category (e.g. typo, accessibility, build)"
+          />
+        </Field>
+      )}
+
       <Field
         label="Screenshots"
         helperText={teamId ? `Bug will be created for team ${teamId}.` : 'No team assigned yet.'}
@@ -304,6 +378,54 @@ export default function SubmitPage() {
           {submitting ? 'Submitting...' : 'Submit'}
         </button>
       </div>
+
+      {/* My Bugs inline section */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">My Bugs</h3>
+          <input
+            placeholder="Search my bugs..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="ml-4 rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div className="space-y-3">
+          {(myBugs || [])
+            .filter((b) => {
+              if (!query.trim()) return true
+              const q = query.toLowerCase()
+              return (b.title || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q)
+            })
+            .map((b) => (
+              <a
+                key={b.id}
+                className="block rounded-md bg-white/60 p-4 shadow hover:shadow-md"
+                href={`/dashboard/bugs/${b.id}`}
+              >
+                <div className="flex justify-between">
+                  <div>
+                    <div className="font-semibold">{b.title}</div>
+                    <div className="text-sm text-gray-500">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
+                  </div>
+                  <div className="text-sm text-right">
+                    <div className="text-gray-700">{b.severity}</div>
+                    <div className="text-gray-500">{b.status}</div>
+                  </div>
+                </div>
+              </a>
+            ))}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">Page {myPage}</div>
+          <div className="flex gap-2">
+            <button disabled={myPage <= 1} onClick={() => setMyPage((p) => Math.max(1, p - 1))} className="rounded-md border px-3 py-1 text-sm">Prev</button>
+            <button onClick={() => setMyPage((p) => p + 1)} className="rounded-md border px-3 py-1 text-sm">Next</button>
+          </div>
+        </div>
+      </section>
     </form>
   )
 }

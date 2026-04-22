@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getAuthState } from '../../lib/auth'
 
 type Bug = {
   id: string
@@ -13,16 +14,52 @@ type Bug = {
 export default function MyBugs() {
   const [bugs, setBugs] = useState<Bug[]>([])
   const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const perPage = 10
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    // For demo: fetch all bugs. Replace with ?submitted_by=... when auth is wired.
-    fetch('/api/bugs')
-      .then((r) => r.json())
-      .then((data) => setBugs(data))
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false))
-  }, [])
+    let mounted = true
+    void (async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const auth = await getAuthState()
+        const submitted_by = auth.session?.user.id
+        if (!submitted_by) {
+          if (mounted) setError('Please log in to view your bugs.')
+          setLoading(false)
+          return
+        }
+
+        const res = await fetch(`/api/bugs?submitted_by=${encodeURIComponent(submitted_by)}&page=${page}&per_page=${perPage}`)
+        if (!res.ok) {
+          const j = await res.json().catch(() => null)
+          if (mounted) setError((j && j.detail) || 'Failed to load bugs')
+          setLoading(false)
+          return
+        }
+
+        const json = await res.json()
+        if (mounted) {
+          setBugs(json.items || [])
+          setTotal(json.total || 0)
+          setTotalPages(json.total_pages || 1)
+        }
+      } catch (e: any) {
+        console.error(e)
+        if (mounted) setError(e.message || 'Failed to load bugs')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [page])
 
   return (
     <div>
@@ -31,7 +68,8 @@ export default function MyBugs() {
 
       <div className="mt-6">
         {loading && <div>Loading...</div>}
-        {!loading && bugs.length === 0 && <div className="text-gray-500">No bugs found.</div>}
+        {error && <div className="text-red-600">{error}</div>}
+        {!loading && !error && bugs.length === 0 && <div className="text-gray-500">No bugs found.</div>}
         <div className="mt-4 space-y-3">
           {bugs.map((b) => (
             <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="block p-4 bg-white/60 rounded-md shadow hover:shadow-md">
@@ -47,6 +85,15 @@ export default function MyBugs() {
               </div>
             </Link>
           ))}
+        </div>
+
+        {/* Pagination controls */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">Page {page} of {totalPages} — {total} results</div>
+          <div className="flex gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-md border px-3 py-1 text-sm">Prev</button>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded-md border px-3 py-1 text-sm">Next</button>
+          </div>
         </div>
       </div>
     </div>

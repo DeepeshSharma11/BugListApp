@@ -4,6 +4,7 @@ import mimetypes
 import logging
 from uuid import uuid4
 from typing import List, Optional
+import math
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,6 +54,27 @@ def compute_fingerprint(title: str, description: str, environment: str) -> str:
     return hashlib.sha256(norm.encode("utf-8")).hexdigest()
 
 
+@app.get("/api/bugs/check")
+def check_duplicate(title: str, description: str = "", environment: str = ""):
+    """Compute fingerprint server-side and check for existing bug.
+    Returns 200 + {exists:false} or 200 + {exists:true, id, title}
+    """
+    fp = compute_fingerprint(title, description, environment)
+    try:
+        res = sb.table("bugs").select("id,title").eq("fingerprint", fp).execute()
+    except Exception:
+        logger.exception("Exception when querying bugs for duplicate check")
+        raise HTTPException(status_code=500, detail="DB error")
+
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", None)
+    if data and len(data) > 0:
+        existing = data[0]
+        return {"exists": True, "id": existing["id"], "title": existing["title"]}
+    return {"exists": False}
+
+
 @app.get("/api/bugs/{bug_id}")
 def get_bug(bug_id: str):
     try:
@@ -70,8 +92,16 @@ def get_bug(bug_id: str):
 
 @app.get("/api/bugs")
 def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None, page: int = 1, per_page: int = 20):
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 20
+    # Cap per_page to reasonable maximum
+    per_page = min(per_page, 100)
+
     try:
-        query = sb.table("bugs").select("id,title,severity,status,priority,submitted_by,team_id,created_at")
+        # Build base query and request exact count
+        query = sb.table("bugs").select("id,title,severity,status,priority,submitted_by,team_id,created_at", count="exact")
         if submitted_by:
             query = query.eq("submitted_by", submitted_by)
         if team_id:
@@ -81,9 +111,37 @@ def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None,
     except Exception:
         logger.exception("Exception when listing bugs")
         raise HTTPException(status_code=500, detail="DB error")
+
     if getattr(res, "error", None):
         raise HTTPException(status_code=500, detail="DB error")
-    return getattr(res, "data", [])
+
+    items = getattr(res, "data", []) or []
+    total = getattr(res, "count", None)
+
+    # Fallback: if client doesn't return count, query separately
+    if total is None:
+        try:
+            count_res = sb.table("bugs").select("id", count="exact")
+            if submitted_by:
+                count_res = count_res.eq("submitted_by", submitted_by)
+            if team_id:
+                count_res = count_res.eq("team_id", team_id)
+            count_exec = count_res.execute()
+            total = getattr(count_exec, "count", None) or (len(getattr(count_exec, "data", []) or []))
+        except Exception:
+            logger.exception("Exception when counting bugs")
+            total = len(items)
+
+    total = int(total or 0)
+    total_pages = math.ceil(total / per_page) if per_page > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+    }
 
 
 @app.post("/api/bugs/")
@@ -221,30 +279,6 @@ def create_bug(
             raise HTTPException(status_code=500, detail="Failed to update bug with screenshots")
 
     return {"id": bug_id, "screenshot_urls": urls, "team_slug": team_slug}
-
-
-# NOTE: uvicorn.run moved to bottom so all routes are registered when running as script
-
-
-@app.get("/api/bugs/check")
-def check_duplicate(title: str, description: str = "", environment: str = ""):
-    """Compute fingerprint server-side and check for existing bug.
-    Returns 200 + {exists:false} or 200 + {exists:true, id, title}
-    """
-    fp = compute_fingerprint(title, description, environment)
-    try:
-        res = sb.table("bugs").select("id,title").eq("fingerprint", fp).execute()
-    except Exception:
-        logger.exception("Exception when querying bugs for duplicate check")
-        raise HTTPException(status_code=500, detail="DB error")
-
-    if getattr(res, "error", None):
-        raise HTTPException(status_code=500, detail="DB error")
-    data = getattr(res, "data", None)
-    if data and len(data) > 0:
-        existing = data[0]
-        return {"exists": True, "id": existing["id"], "title": existing["title"]}
-    return {"exists": False}
 
 
 @app.post("/api/bugs/{bug_id}/screenshots")

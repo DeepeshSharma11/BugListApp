@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.bugs (
   priority public.priority_enum NOT NULL DEFAULT 'normal',
   environment text,
   version text,
+  category text,
   screenshot_urls text[] NOT NULL DEFAULT ARRAY[]::text[],
   submitted_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   team_id uuid REFERENCES public.teams(id) ON DELETE CASCADE,
@@ -38,6 +39,17 @@ CREATE TABLE IF NOT EXISTS public.bugs (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Backfill for existing databases: add `category` column if it does not exist.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'bugs' AND column_name = 'category'
+  ) THEN
+    ALTER TABLE public.bugs ADD COLUMN category text;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.bug_comments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

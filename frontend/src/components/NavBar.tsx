@@ -65,9 +65,10 @@ export default function NavBar() {
     setIsOpen(false);
   };
 
+  
+
   const baseNavLinks = [
     { name: 'Submit', path: '/dashboard/submit' },
-    { name: 'My Bugs', path: '/dashboard/my-bugs' },
     { name: 'Team', path: '/dashboard/team' },
     { name: 'Notifications', path: '/dashboard/notifications' },
     { name: 'Profile', path: '/dashboard/profile' },
@@ -118,6 +119,8 @@ export default function NavBar() {
               ))}
             </nav>
             
+            
+
             <div className="mr-3">
               <button
                 type="button"
@@ -193,6 +196,8 @@ export default function NavBar() {
               </Link>
             ))}
             
+            
+
             <div className="mt-2 border-t border-[var(--border-color)] pt-2">
               <button
                 type="button"
