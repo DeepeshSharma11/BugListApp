@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
+import { getAuthState } from '../../lib/auth'
 
 interface NotificationRow {
   id: string
@@ -46,9 +47,19 @@ export default function Notifications() {
       setLoading(true)
       setError(null)
 
+      // Get current user id first
+      const auth = await getAuthState()
+      const userId = auth.session?.user?.id
+      if (!userId) {
+        setError('Not logged in.')
+        setLoading(false)
+        return
+      }
+
       const { data, error: fetchError } = await supabase
         .from('notifications')
         .select('id, type, title, message, entity_type, entity_id, is_read, created_at')
+        .eq('recipient_id', userId)
         .order('created_at', { ascending: false })
 
       if (fetchError) {

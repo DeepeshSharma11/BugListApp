@@ -142,15 +142,27 @@ export default function AdminDashboard() {
     setLoading(true)
     setError(null)
 
+    // Fetch stats via count-only queries (accurate beyond Supabase's 1000-row default)
     const [
-      { data: bugs, error: bugsError },
+      { count: totalBugs, error: e1 },
+      { count: openBugs, error: e2 },
+      { count: resolvedBugs, error: e3 },
+      { count: criticalBugs, error: e4 },
+      { count: highPriorityBugs, error: e5 },
+      { data: recentBugsData, error: e6 },
       { data: teamsData, error: teamsError },
       { data: usersData, error: usersError },
     ] = await Promise.all([
+      supabase.from('bugs').select('id', { count: 'exact', head: true }),
+      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('status', 'resolved'),
+      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('severity', 'critical'),
+      supabase.from('bugs').select('id', { count: 'exact', head: true }).in('priority', ['high', 'urgent']),
       supabase
         .from('bugs')
         .select('id, title, status, severity, priority, team_id, created_at')
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(8),
       supabase.from('teams').select('id, name, slug, created_at').order('created_at', { ascending: false }),
       supabase
         .from('profiles')
@@ -158,29 +170,26 @@ export default function AdminDashboard() {
         .order('created_at', { ascending: false }),
     ])
 
-    if (bugsError || teamsError || usersError) {
-      setError(bugsError?.message || teamsError?.message || usersError?.message || 'Failed to load admin dashboard.')
+    const anyError = e1 || e2 || e3 || e4 || e5 || e6 || teamsError || usersError
+    if (anyError) {
+      setError(anyError.message || 'Failed to load admin dashboard.')
       setLoading(false)
       return
     }
 
-    const bugRows = bugs ?? []
-    const teamRows = teamsData ?? []
-    const userRows = usersData ?? []
-
     setStats({
-      totalBugs: bugRows.length,
-      openBugs: bugRows.filter((bug) => bug.status === 'open').length,
-      resolvedBugs: bugRows.filter((bug) => bug.status === 'resolved').length,
-      criticalBugs: bugRows.filter((bug) => bug.severity === 'critical').length,
-      highPriorityBugs: bugRows.filter((bug) => bug.priority === 'high' || bug.priority === 'urgent').length,
-      teamCount: teamRows.length,
+      totalBugs: totalBugs ?? 0,
+      openBugs: openBugs ?? 0,
+      resolvedBugs: resolvedBugs ?? 0,
+      criticalBugs: criticalBugs ?? 0,
+      highPriorityBugs: highPriorityBugs ?? 0,
+      teamCount: teamsData?.length ?? 0,
     })
 
-    setRecentBugs(bugRows.slice(0, 8))
-    setTeams(teamRows)
-    setUsers(userRows)
-    setSelectedTeamId((current) => current || teamRows[0]?.id || '')
+    setRecentBugs(recentBugsData ?? [])
+    setTeams(teamsData ?? [])
+    setUsers(usersData ?? [])
+    setSelectedTeamId((current) => current || teamsData?.[0]?.id || '')
     setLoading(false)
   }
 

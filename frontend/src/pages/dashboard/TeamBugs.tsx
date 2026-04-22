@@ -25,6 +25,11 @@ export default function TeamBugs() {
   const [severityFilter, setSeverityFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
 
+  // Reset to page 1 whenever any filter changes
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter, severityFilter, categoryFilter])
+
   useEffect(() => {
     let mounted = true
     void (async () => {

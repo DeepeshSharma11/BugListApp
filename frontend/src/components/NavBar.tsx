@@ -14,11 +14,32 @@ export default function NavBar() {
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
+    let realtimeSub: ReturnType<typeof supabase.channel> | null = null;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       void checkAdmin(session);
       void loadUnreadNotifications(session);
+
+      // Subscribe to realtime notifications changes for this user
+      if (session?.user) {
+        realtimeSub = supabase
+          .channel('navbar-notifications')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'notifications',
+              filter: `recipient_id=eq.${session.user.id}`,
+            },
+            () => {
+              void loadUnreadNotifications(session);
+            }
+          )
+          .subscribe();
+      }
     });
 
     // Listen for auth changes
@@ -30,7 +51,10 @@ export default function NavBar() {
       void loadUnreadNotifications(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (realtimeSub) void supabase.removeChannel(realtimeSub);
+    };
   }, []);
 
   useEffect(() => {
