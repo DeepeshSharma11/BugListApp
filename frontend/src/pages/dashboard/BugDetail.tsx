@@ -13,6 +13,8 @@ type Bug = {
   status?: string
   priority?: string
   created_at?: string
+  submitted_by?: string
+  assigned_to?: string
 }
 
 export default function BugDetail() {
