@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -12,6 +13,7 @@ export default function NavBar() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      checkAdmin(session);
     });
 
     // Listen for auth changes
@@ -19,10 +21,26 @@ export default function NavBar() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      checkAdmin(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdmin = async (currentSession: any) => {
+    if (!currentSession?.user) {
+      setIsAdmin(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentSession.user.id)
+      .single();
+
+    setIsAdmin(data?.role === 'admin' || data?.role === 'super_admin');
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -30,13 +48,16 @@ export default function NavBar() {
     setIsOpen(false);
   };
 
-  const navLinks = [
+  const baseNavLinks = [
     { name: 'Submit', path: '/dashboard/submit' },
     { name: 'My Bugs', path: '/dashboard/my-bugs' },
     { name: 'Team', path: '/dashboard/team' },
     { name: 'Profile', path: '/dashboard/profile' },
-    { name: 'Admin', path: '/admin' },
   ];
+
+  const navLinks = isAdmin 
+    ? [...baseNavLinks, { name: 'Admin', path: '/admin' }]
+    : baseNavLinks;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
