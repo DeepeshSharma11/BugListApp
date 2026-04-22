@@ -101,6 +101,10 @@ export default function AdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [cleanupDays, setCleanupDays] = useState<number>(90)
+  const [cleanupDryRun, setCleanupDryRun] = useState<boolean>(true)
+  const [runningCleanup, setRunningCleanup] = useState(false)
+  const [cleanupResult, setCleanupResult] = useState<any>(null)
 
   const usersByTeam = useMemo(() => {
     return teams.map((team) => ({
@@ -285,6 +289,42 @@ export default function AdminDashboard() {
     }
 
     setIsModalOpen(true)
+  }
+
+  async function handleCleanupOldBugs() {
+    setRunningCleanup(true)
+    setCleanupResult(null)
+    setError(null)
+    try {
+      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
+      if (!adminSecret) {
+        setError('VITE_ADMIN_SECRET not set in frontend env. Set it only for local admin testing.')
+        setRunningCleanup(false)
+        return
+      }
+
+      const res = await fetch('/api/admin/bugs/cleanup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': adminSecret,
+        },
+        body: JSON.stringify({ days: cleanupDays, dry_run: cleanupDryRun }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.detail || 'Cleanup failed')
+      } else {
+        setCleanupResult(json)
+        setSuccess('Cleanup completed (or dry run result).')
+      }
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message || 'Cleanup error')
+    } finally {
+      setRunningCleanup(false)
+    }
   }
 
   return (

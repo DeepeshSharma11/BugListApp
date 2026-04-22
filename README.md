@@ -4,6 +4,7 @@ Bug Tracker App is a full-stack bug reporting system built with:
 
 - `React + Vite + TypeScript` on the frontend
 - `FastAPI` on the backend
+- `Expo + React Native` for Android mobile
 - `Supabase` for auth, database, and storage
 
 It supports:
@@ -31,6 +32,10 @@ BugTaskApp/
 ├─ frontend/
 │  ├─ src/
 │  ├─ .env
+│  └─ package.json
+├─ mobile/
+│  ├─ src/
+│  ├─ .env.example
 │  └─ package.json
 └─ README.md
 ```
@@ -97,6 +102,43 @@ Frontend runs at `http://localhost:3000`.
 The Vite config proxies `/api` requests to the backend at `http://127.0.0.1:8000`.
 
 If you change `vite.config.ts`, restart the frontend dev server.
+
+## Mobile Android App Setup
+
+The repo now includes an Expo-based Android app in `mobile/`.
+
+Create `mobile/.env` from `mobile/.env.example`:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+```
+
+Why `10.0.2.2`:
+
+- Android emulator cannot use your computer's `localhost`
+- `10.0.2.2` maps emulator -> host machine
+
+Run the mobile app:
+
+```powershell
+cd mobile
+npm install
+npm start
+```
+
+Then open it in:
+
+- Android Emulator
+- Expo Go on Android
+
+Current mobile features:
+
+- Supabase login
+- profile/dashboard summary
+- submit bug through FastAPI backend
+- notifications list from Supabase
 
 ## Backend Setup
 

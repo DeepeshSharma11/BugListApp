@@ -4,7 +4,9 @@ import mimetypes
 import logging
 from uuid import uuid4
 from typing import List, Optional
-from fastapi import FastAPI, Form, File, UploadFile, HTTPException
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Request
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from supabase import create_client
@@ -24,10 +26,21 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     logger.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
     raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
 
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+
 logger.info("Initializing Supabase client...")
 sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 app = FastAPI(title="Bug Tracker API")
+
+# Allow local frontend dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp", "image/gif"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -38,6 +51,39 @@ BUCKET = "bug-screenshots"
 def compute_fingerprint(title: str, description: str, environment: str) -> str:
     norm = (title + "\n" + description + "\n" + (environment or "")).strip().lower()
     return hashlib.sha256(norm.encode("utf-8")).hexdigest()
+
+
+@app.get("/api/bugs/{bug_id}")
+def get_bug(bug_id: str):
+    try:
+        res = sb.table("bugs").select("*").eq("id", bug_id).execute()
+    except Exception:
+        logger.exception("Exception when fetching bug by id")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", None)
+    if not data or len(data) == 0:
+        raise HTTPException(status_code=404, detail="Bug not found")
+    return data[0]
+
+
+@app.get("/api/bugs")
+def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None, page: int = 1, per_page: int = 20):
+    try:
+        query = sb.table("bugs").select("id,title,severity,status,priority,submitted_by,team_id,created_at")
+        if submitted_by:
+            query = query.eq("submitted_by", submitted_by)
+        if team_id:
+            query = query.eq("team_id", team_id)
+        offset = (page - 1) * per_page
+        res = query.order("created_at", desc=True).range(offset, offset + per_page - 1).execute()
+    except Exception:
+        logger.exception("Exception when listing bugs")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    return getattr(res, "data", [])
 
 
 @app.post("/api/bugs/")
@@ -66,18 +112,29 @@ def create_bug(
     # Compute fingerprint
     fingerprint = compute_fingerprint(title, description, environment or "")
     # Check duplicate
-    res = sb.table("bugs").select("id,title").eq("fingerprint", fingerprint).execute()
-    if res.error:
-        logger.error(f"Database error during fingerprint check: {res.error}")
+    try:
+        res = sb.table("bugs").select("id,title").eq("fingerprint", fingerprint).execute()
+    except Exception as e:
+        logger.exception("Exception when querying bugs for fingerprint check")
         raise HTTPException(status_code=500, detail="DB error")
-    if res.data and len(res.data) > 0:
-        existing = res.data[0]
+
+    if getattr(res, "error", None):
+        logger.error(f"Database error during fingerprint check: {getattr(res, 'error', None)}")
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", None)
+    if data and len(data) > 0:
+        existing = data[0]
         logger.info(f"Duplicate bug found: {existing['id']}")
         return JSONResponse(status_code=409, content={"detail": "duplicate", "id": existing["id"], "title": existing["title"]})
 
     # Resolve team slug (useful for client-side uploads)
-    team_res = sb.table("teams").select("slug").eq("id", team_id).execute()
-    if team_res.error or not team_res.data:
+    try:
+        team_res = sb.table("teams").select("slug").eq("id", team_id).execute()
+    except Exception:
+        logger.exception("Exception when querying team slug")
+        raise HTTPException(status_code=400, detail="Invalid team_id or cannot find team slug")
+
+    if getattr(team_res, "error", None) or not getattr(team_res, "data", None):
         logger.error(f"Team validation failed for team_id: {team_id}")
         raise HTTPException(status_code=400, detail="Invalid team_id or cannot find team slug")
     team_slug = team_res.data[0]["slug"]
@@ -102,10 +159,15 @@ def create_bug(
         "fingerprint": fingerprint,
         "tags": tags_arr,
     }
-    insert_res = sb.table("bugs").insert(bug_obj).execute()
-    if insert_res.error:
-        raise HTTPException(status_code=500, detail=str(insert_res.error))
-    created = insert_res.data[0]
+    try:
+        insert_res = sb.table("bugs").insert(bug_obj).execute()
+    except Exception:
+        logger.exception("Exception when inserting new bug")
+        raise HTTPException(status_code=500, detail="DB insert error")
+
+    if getattr(insert_res, "error", None):
+        raise HTTPException(status_code=500, detail=str(getattr(insert_res, "error")))
+    created = getattr(insert_res, "data", [None])[0]
     bug_id = created["id"]
 
     # Upload files if any
@@ -114,8 +176,12 @@ def create_bug(
         if len(files) > MAX_FILES:
             raise HTTPException(status_code=400, detail=f"Max {MAX_FILES} images allowed")
         # Get team slug
-        team_res = sb.table("teams").select("slug").eq("id", team_id).execute()
-        if team_res.error or not team_res.data:
+        try:
+            team_res = sb.table("teams").select("slug").eq("id", team_id).execute()
+        except Exception:
+            logger.exception("Exception when querying team slug for uploads")
+            raise HTTPException(status_code=400, detail="Invalid team_id or cannot find team slug")
+        if getattr(team_res, "error", None) or not getattr(team_res, "data", None):
             raise HTTPException(status_code=400, detail="Invalid team_id or cannot find team slug")
         team_slug = team_res.data[0]["slug"]
 
@@ -141,7 +207,8 @@ def create_bug(
             filename = f"{str(uuid4())}.{ext}"
             path = f"{team_slug}/{bug_id}/{filename}"
             upload = sb.storage.from_(BUCKET).upload(path, contents, {'content-type': f.content_type})
-            if upload.error:
+            if getattr(upload, "error", None):
+                logger.error(f"Upload failed for {f.filename}: {getattr(upload, 'error', None)}")
                 raise HTTPException(status_code=500, detail=f"Upload failed for {f.filename}")
             # Get public url (bucket should be public-read per spec)
             public = sb.storage.from_(BUCKET).get_public_url(path)
@@ -149,16 +216,14 @@ def create_bug(
 
         # Update bug with screenshot URLs
         upd = sb.table("bugs").update({"screenshot_urls": urls}).eq("id", bug_id).execute()
-        if upd.error:
+        if getattr(upd, "error", None):
+            logger.error(f"Failed to update bug screenshots: {getattr(upd, 'error', None)}")
             raise HTTPException(status_code=500, detail="Failed to update bug with screenshots")
 
     return {"id": bug_id, "screenshot_urls": urls, "team_slug": team_slug}
 
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+# NOTE: uvicorn.run moved to bottom so all routes are registered when running as script
 
 
 @app.get("/api/bugs/check")
@@ -167,11 +232,17 @@ def check_duplicate(title: str, description: str = "", environment: str = ""):
     Returns 200 + {exists:false} or 200 + {exists:true, id, title}
     """
     fp = compute_fingerprint(title, description, environment)
-    res = sb.table("bugs").select("id,title").eq("fingerprint", fp).execute()
-    if res.error:
+    try:
+        res = sb.table("bugs").select("id,title").eq("fingerprint", fp).execute()
+    except Exception:
+        logger.exception("Exception when querying bugs for duplicate check")
         raise HTTPException(status_code=500, detail="DB error")
-    if res.data and len(res.data) > 0:
-        existing = res.data[0]
+
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", None)
+    if data and len(data) > 0:
+        existing = data[0]
         return {"exists": True, "id": existing["id"], "title": existing["title"]}
     return {"exists": False}
 
@@ -180,6 +251,86 @@ def check_duplicate(title: str, description: str = "", environment: str = ""):
 def update_screenshots(bug_id: str, urls: List[str]):
     """Update screenshot_urls for a bug. Accepts JSON array of URLs."""
     upd = sb.table("bugs").update({"screenshot_urls": urls}).eq("id", bug_id).execute()
-    if upd.error:
+    if getattr(upd, "error", None):
+        logger.error(f"Failed to update screenshots for {bug_id}: {getattr(upd, 'error', None)}")
         raise HTTPException(status_code=500, detail="Failed to update screenshots")
     return {"id": bug_id, "screenshot_urls": urls}
+
+
+def _require_admin(request: Request):
+    if not ADMIN_SECRET:
+        logger.error("ADMIN_SECRET not configured on server")
+        raise HTTPException(status_code=403, detail="Admin secret not configured")
+    hdr = request.headers.get("x-admin-secret")
+    if not hdr or hdr != ADMIN_SECRET:
+        logger.warning("Unauthorized admin attempt")
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+
+@app.post("/api/admin/bugs/cleanup")
+def admin_cleanup(request: Request, days: int = 90, dry_run: bool = True):
+    """Delete bugs older than `days`. Protected by `x-admin-secret` header.
+    If `dry_run` is true, returns count but does not delete.
+    """
+    _require_admin(request)
+    if days <= 0:
+        raise HTTPException(status_code=400, detail="days must be > 0")
+    # cutoff in ISO format
+    from datetime import datetime, timedelta
+
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat() + 'Z'
+    logger.info(f"Admin cleanup requested: days={days}, dry_run={dry_run}, cutoff={cutoff}")
+    try:
+        # count matching
+        count_res = sb.table("bugs").select("id", count="exact").lt("created_at", cutoff).execute()
+    except Exception:
+        logger.exception("Exception when counting old bugs")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(count_res, "error", None):
+        logger.error(f"Error counting old bugs: {getattr(count_res,'error',None)}")
+        raise HTTPException(status_code=500, detail="DB error")
+    # Supabase python client may return count in res.count or res.data length depending on settings
+    total = getattr(count_res, "count", None) or (len(getattr(count_res, "data", []) if getattr(count_res, "data", None) else []))
+    if dry_run:
+        return {"deleted": 0, "match_count": total, "dry_run": True}
+
+    try:
+        del_res = sb.table("bugs").delete().lt("created_at", cutoff).execute()
+    except Exception:
+        logger.exception("Exception when deleting old bugs")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(del_res, "error", None):
+        logger.error(f"Error deleting old bugs: {getattr(del_res,'error',None)}")
+        raise HTTPException(status_code=500, detail="DB error")
+    deleted_count = len(getattr(del_res, "data", []))
+    logger.info(f"Admin cleanup completed, deleted {deleted_count} bugs")
+    return {"deleted": deleted_count, "match_count": total, "dry_run": False}
+
+
+class BugUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[str] = None
+
+
+@app.patch("/api/bugs/{bug_id}")
+def update_bug(bug_id: str, update: BugUpdate):
+    """Partial update for bug. Triggers in DB will generate notifications as needed."""
+    allowed_fields = {k: v for k, v in update.dict().items() if v is not None}
+    if not allowed_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    try:
+        res = sb.table("bugs").update(allowed_fields).eq("id", bug_id).execute()
+    except Exception:
+        logger.exception("Exception when updating bug")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(res, "error", None):
+        logger.error(f"Failed to update bug {bug_id}: {getattr(res, 'error', None)}")
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", None)
+    if not data:
+        raise HTTPException(status_code=404, detail="Bug not found or not updated")
+    return data[0]
