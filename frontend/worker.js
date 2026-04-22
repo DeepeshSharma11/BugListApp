@@ -10,8 +10,11 @@ export default {
       targetUrl.port = '8000';
       
       // We create a new request with the updated URL
-      // This happens on Cloudflare's servers, so no Mixed Content error in the browser!
       const newRequest = new Request(targetUrl.toString(), request);
+      
+      // Trick the backend CORS by setting the origin to localhost:3000
+      newRequest.headers.set('Origin', 'http://localhost:3000');
+      
       return fetch(newRequest);
     }
     
