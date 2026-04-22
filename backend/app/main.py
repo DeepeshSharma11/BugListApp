@@ -49,6 +49,9 @@ ADMIN_SECRET = os.getenv("ADMIN_SECRET")
 logger.info("Initializing Supabase client...")
 sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+SMTP_EMAIL = os.getenv("SMTP_EMAIL", "akshatgupta1452@gmail.com")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
 app = FastAPI(title="Bug Tracker API")
 
 # --- Rate Limiter ---
@@ -553,7 +556,7 @@ async def reply_support_ticket(request: Request, ticket_id: str, reply_data: Sup
 
         # Send email via SMTP
         msg = EmailMessage()
-        msg["From"] = "BugTracker Support <akshatgupta1452@gmail.com>"
+        msg["From"] = f"BugTracker Support <{SMTP_EMAIL}>"
         msg["To"] = user_email
         msg["Subject"] = f"Re: {subject} (BugTracker Support)"
         
@@ -570,25 +573,26 @@ The BugTracker Team
         msg.set_content(email_body)
 
         try:
-            await aiosmtplib.send(
-                msg,
-                hostname="smtp.gmail.com",
-                port=587,
-                start_tls=True,
-                username="akshatgupta1452@gmail.com",
-                password="tjzf zejf wkhv qvnt"
-            )
-            logger.info(f"Reply email sent successfully to {user_email}")
+            if not SMTP_PASSWORD:
+                logger.warning("SMTP_PASSWORD is not set. Email will not be sent.")
+            else:
+                await aiosmtplib.send(
+                    msg,
+                    hostname="smtp.gmail.com",
+                    port=587,
+                    start_tls=True,
+                    username=SMTP_EMAIL,
+                    password=SMTP_PASSWORD
+                )
+                logger.info(f"Reply email sent successfully to {user_email}")
         except Exception as e:
             logger.error(f"Failed to send email to {user_email}: {e}")
             raise HTTPException(status_code=500, detail="Failed to send email reply")
 
         # Update ticket in database
-        import datetime
         update_res = sb.table("support_tickets").update({
             "status": reply_data.status,
-            "message": ticket["message"] + f"\n\n--- Admin Reply ---\n{reply_data.reply}", # Append reply since we don't have a separate column
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "message": ticket["message"] + f"\n\n--- Admin Reply ---\n{reply_data.reply}"
         }).eq("id", ticket_id).execute()
 
         if getattr(update_res, "error", None):
