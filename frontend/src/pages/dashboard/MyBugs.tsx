@@ -64,25 +64,29 @@ export default function MyBugs() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold">My Bugs</h2>
-      <p className="mt-4 text-sm text-gray-600">List of bugs submitted by you will appear here.</p>
+      <div className="mb-6">
+        <h2 className="text-3xl font-extrabold tracking-tight">My Bugs</h2>
+        <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">
+          List of bugs submitted by you will appear here.
+        </p>
+      </div>
 
       <div className="mt-6">
         {loading && <div>Loading...</div>}
         {error && <div className="text-red-600">{error}</div>}
         {!loading && !error && bugs.length === 0 && <div className="text-gray-500">No bugs found.</div>}
-        <div className="mt-4 space-y-3">
+        <div className="mt-6 space-y-4">
           {bugs.map((b) => (
-            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="block p-4 bg-white/60 rounded-md shadow hover:shadow-md">
-              <div className="flex justify-between">
+            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="card block hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div className="font-semibold">{b.title}</div>
-                  <div className="text-sm text-gray-500">{new Date(b.created_at).toLocaleString()}</div>
-                  {b.category && <div className="mt-1 text-xs text-slate-600">Category: {b.category}</div>}
+                  <div className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{b.title}</div>
+                  <div className="text-sm text-[var(--muted-text)] mt-1 font-medium">{new Date(b.created_at).toLocaleString()}</div>
+                  {b.category && <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-[var(--soft-surface)] text-[var(--muted-text)] border border-[var(--border-color)]">Category: {b.category}</div>}
                 </div>
-                <div className="text-sm text-right">
-                  <div className="text-gray-700">{b.severity}</div>
-                  <div className="text-gray-500">{b.status}</div>
+                <div className="flex flex-wrap sm:flex-col items-end gap-2 text-sm">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${b.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>{b.severity}</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{b.status}</span>
                 </div>
               </div>
             </Link>
@@ -90,11 +94,11 @@ export default function MyBugs() {
         </div>
 
         {/* Pagination controls */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">Page {page} of {totalPages} — {total} results</div>
+        <div className="mt-8 flex items-center justify-between border-t border-[var(--border-color)] pt-4">
+          <div className="text-sm font-medium text-[var(--muted-text)]">Page <span className="text-[var(--text-color)]">{page}</span> of <span className="text-[var(--text-color)]">{totalPages}</span> — <span className="text-[var(--text-color)]">{total}</span> results</div>
           <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-md border px-3 py-1 text-sm">Prev</button>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded-md border px-3 py-1 text-sm">Next</button>
+            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Prev</button>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Next</button>
           </div>
         </div>
       </div>

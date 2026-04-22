@@ -337,12 +337,12 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="w-full space-y-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[var(--border-color)] pb-6">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Team create karo, users ko email se assign karo, aur latest bug activity monitor karo.
+          <h2 className="text-3xl font-extrabold tracking-tight">Admin Dashboard</h2>
+          <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">
+            Manage teams, assign users, and monitor latest bug activity.
           </p>
         </div>
         <Link
@@ -354,25 +354,25 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wider text-slate-500">Total Bugs</p>
-          <p className="mt-3 text-3xl font-bold text-slate-900">{stats.totalBugs}</p>
+        <div className="card border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/10 p-5">
+          <p className="text-sm font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">Total Bugs</p>
+          <p className="mt-3 text-3xl font-black text-blue-900 dark:text-blue-100">{stats.totalBugs}</p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wider text-amber-700">Open</p>
-          <p className="mt-3 text-3xl font-bold text-amber-600">{stats.openBugs}</p>
+        <div className="card border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/10 p-5">
+          <p className="text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Open</p>
+          <p className="mt-3 text-3xl font-black text-amber-900 dark:text-amber-100">{stats.openBugs}</p>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wider text-emerald-700">Resolved</p>
-          <p className="mt-3 text-3xl font-bold text-emerald-600">{stats.resolvedBugs}</p>
+        <div className="card border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 p-5">
+          <p className="text-sm font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Resolved</p>
+          <p className="mt-3 text-3xl font-black text-emerald-900 dark:text-emerald-100">{stats.resolvedBugs}</p>
         </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wider text-rose-700">Critical</p>
-          <p className="mt-3 text-3xl font-bold text-rose-600">{stats.criticalBugs}</p>
+        <div className="card border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-900/10 p-5">
+          <p className="text-sm font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">Critical</p>
+          <p className="mt-3 text-3xl font-black text-rose-900 dark:text-rose-100">{stats.criticalBugs}</p>
         </div>
-        <div className="rounded-xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wider text-sky-700">Teams</p>
-          <p className="mt-3 text-3xl font-bold text-sky-700">{stats.teamCount}</p>
+        <div className="card border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-900/10 p-5">
+          <p className="text-sm font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">Teams</p>
+          <p className="mt-3 text-3xl font-black text-purple-900 dark:text-purple-100">{stats.teamCount}</p>
         </div>
       </div>
 
@@ -391,30 +391,32 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Team Setup
-          </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-900">Create New Team</h3>
+      <div className="grid gap-8 xl:grid-cols-[0.95fr_1.05fr]">
+        <section className="card p-8">
+          <div className="border-b border-[var(--border-color)] pb-4 mb-6">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">
+              Team Setup
+            </p>
+            <h3 className="mt-1 text-xl font-bold">Create New Team</h3>
+          </div>
 
-          <form className="mt-5 space-y-4" onSubmit={handleCreateTeam}>
+          <form className="space-y-5" onSubmit={handleCreateTeam}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Team Name</label>
+              <label className="mb-2 block text-sm font-bold tracking-wide">Team Name</label>
               <input
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
                 placeholder="Frontend QA"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Team Slug</label>
+              <label className="mb-2 block text-sm font-bold tracking-wide">Team Slug</label>
               <input
                 value={teamSlug}
                 onChange={(e) => setTeamSlug(slugify(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
                 placeholder="frontend-qa"
               />
             </div>
@@ -422,23 +424,23 @@ export default function AdminDashboard() {
             <button
               type="submit"
               disabled={savingTeam}
-              className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-md disabled:hover:bg-blue-600"
             >
               {savingTeam ? 'Creating Team...' : 'Create Team'}
             </button>
           </form>
 
-          <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-medium text-slate-700">Assign Users By Email</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Team select karke modal kholo, phir email ya name se users pick karke assign kar do.
+          <div className="mt-10 rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-6">
+            <h4 className="text-base font-bold">Assign Users</h4>
+            <p className="mt-1.5 text-sm text-[var(--muted-text)] font-medium">
+              Select a team and open the user selector to manage assignments.
             </p>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <select
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+                className="w-full flex-1 rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-shadow font-medium"
               >
                 <option value="">Select Team</option>
                 {teams.map((team) => (
@@ -459,28 +461,30 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Team Directory
-          </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-900">All Teams And Assigned Users</h3>
+        <section className="card p-8">
+          <div className="border-b border-[var(--border-color)] pb-4 mb-6">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">
+              Team Directory
+            </p>
+            <h3 className="mt-1 text-xl font-bold">All Teams And Assigned Users</h3>
+          </div>
 
-          <div className="mt-5 space-y-4">
+          <div className="space-y-4">
             {usersByTeam.length === 0 && !loading ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-                Abhi tak koi team create nahi hui.
+              <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] p-8 text-center text-sm font-medium text-[var(--muted-text)]">
+                No teams have been created yet.
               </div>
             ) : (
               usersByTeam.map((team) => (
-                <div key={team.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div key={team.id} className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h4 className="text-base font-semibold text-slate-900">{team.name}</h4>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <h4 className="text-lg font-bold">{team.name}</h4>
+                      <p className="mt-1 text-xs font-medium text-[var(--muted-text)]">
                         {team.slug} • Created {formatDate(team.created_at)}
                       </p>
                     </div>
-                    <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    <span className="rounded-full bg-[var(--border-color)] px-3 py-1 text-xs font-bold text-[var(--text-color)]">
                       {team.members.length} member(s)
                     </span>
                   </div>
@@ -514,16 +518,16 @@ export default function AdminDashboard() {
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
+      <div className="grid gap-8 xl:grid-cols-[1.4fr_0.8fr]">
+        <section className="card p-8">
+          <div className="mb-6 flex items-center justify-between border-b border-[var(--border-color)] pb-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">
                 Recent Activity
               </p>
-              <h3 className="mt-2 text-lg font-semibold text-slate-900">Latest Bug Reports</h3>
+              <h3 className="mt-1 text-xl font-bold">Latest Bug Reports</h3>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <span className="rounded-full bg-[var(--soft-surface)] border border-[var(--border-color)] px-3 py-1 text-xs font-bold">
               {recentBugs.length} shown
             </span>
           </div>
@@ -575,13 +579,15 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            User Overview
-          </p>
-          <h3 className="mt-2 text-lg font-semibold text-slate-900">All Users</h3>
+        <section className="card p-8">
+          <div className="mb-6 border-b border-[var(--border-color)] pb-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">
+              User Overview
+            </p>
+            <h3 className="mt-1 text-xl font-bold">All Users</h3>
+          </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="space-y-4">
             {users.length === 0 && !loading ? (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
                 Koi user data visible nahi hai.

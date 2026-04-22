@@ -15,10 +15,10 @@ function Field({
   helperText?: string
 }) {
   return (
-    <div className="mb-5">
-      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+    <div className="mb-6">
+      <label className="mb-2 block text-sm font-bold tracking-wide">{label}</label>
       {children}
-      {helperText && <p className="mt-1 text-xs text-slate-500">{helperText}</p>}
+      {helperText && <p className="mt-1.5 text-xs text-[var(--muted-text)] font-medium">{helperText}</p>}
     </div>
   )
 }
@@ -267,32 +267,37 @@ export default function SubmitPage() {
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2 className="mb-4 text-2xl font-semibold">Submit Bug</h2>
+    <form onSubmit={submit} className="max-w-4xl mx-auto">
+      <div className="mb-8 border-b border-[var(--border-color)] pb-6">
+        <h2 className="text-3xl font-extrabold tracking-tight">Submit a Bug</h2>
+        <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">Found an issue? Let the team know.</p>
+      </div>
 
       {!profileReady && (
-        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+        <div className="mb-6 rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-4 text-sm font-medium animate-pulse">
           Loading your profile details...
         </div>
       )}
 
       {formError && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 p-4 text-sm font-medium text-red-700 dark:text-red-400">
           {formError}
         </div>
       )}
+
+      <div className="card mb-10">
 
       <Field label="Title">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-md border p-2"
+          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
           required
         />
         {duplicate && (
-          <div className="mt-2 text-yellow-700">
+          <div className="mt-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 p-3 text-sm font-medium text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50">
             Possible duplicate:{' '}
-            <a className="underline" href={`/dashboard/bugs/${duplicate.id}`}>
+            <a className="underline font-bold hover:text-orange-800 dark:hover:text-orange-300" href={`/dashboard/bugs/${duplicate.id}`}>
               {duplicate.title}
             </a>
           </div>
@@ -304,7 +309,7 @@ export default function SubmitPage() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={6}
-          className="w-full rounded-md border p-2"
+          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-y"
           required
         />
       </Field>
@@ -313,37 +318,39 @@ export default function SubmitPage() {
         <input
           value={environment}
           onChange={(e) => setEnvironment(e.target.value)}
-          className="w-full rounded-md border p-2"
+          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
           placeholder="production, staging, Android 14, Chrome..."
         />
       </Field>
 
-      <Field label="Category">
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full rounded-md border p-2"
-        >
-          <option value="">Select category (optional)</option>
-          <option value="dashboard-bug">Dashboard bug</option>
-          <option value="navbar-bug">NavBar bug</option>
-          <option value="footer-bug">Footer bug</option>
-          <option value="ui-bug">UI bug</option>
-          <option value="performance">Performance</option>
-          <option value="__custom__">Custom...</option>
-        </select>
-      </Field>
-
-      {(category === '__custom__' || customCategory) && (
-        <Field label="Custom category" helperText="Optional — will be saved as a tag">
-          <input
-            value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value)}
-            className="w-full rounded-md border p-2"
-            placeholder="Enter custom category (e.g. typo, accessibility, build)"
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Field label="Category">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          >
+            <option value="">Select category (optional)</option>
+            <option value="dashboard-bug">Dashboard bug</option>
+            <option value="navbar-bug">NavBar bug</option>
+            <option value="footer-bug">Footer bug</option>
+            <option value="ui-bug">UI bug</option>
+            <option value="performance">Performance</option>
+            <option value="__custom__">Custom...</option>
+          </select>
         </Field>
-      )}
+
+        {(category === '__custom__' || customCategory) && (
+          <Field label="Custom category" helperText="Optional — will be saved as a tag">
+            <input
+              value={customCategory}
+              onChange={(e) => setCustomCategory(e.target.value)}
+              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              placeholder="Enter custom category"
+            />
+          </Field>
+        )}
+      </div>
 
       <Field
         label="Screenshots"
@@ -351,17 +358,21 @@ export default function SubmitPage() {
       >
         <div
           {...getRootProps()}
-          className="cursor-pointer rounded-md border-2 border-dashed border-gray-300 p-4 text-center"
+          className="cursor-pointer rounded-2xl border-2 border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] hover:bg-[var(--card-color)] transition-colors p-8 text-center"
         >
           <input {...getInputProps()} />
-          <p>Drag & drop images here, or click to select (max 5)</p>
+          <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          </div>
+          <p className="font-medium">Drag & drop images here</p>
+          <p className="text-sm text-[var(--muted-text)] mt-1">or click to browse files (max 5)</p>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {files.map((file, index) => (
             <div
               key={`${file.name}-${index}`}
-              className="flex h-20 items-center justify-center overflow-hidden rounded bg-gray-100 px-2 text-center text-xs"
+              className="flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] px-2 text-center text-xs font-medium shadow-sm break-all"
             >
               {file.name}
             </div>
@@ -369,29 +380,33 @@ export default function SubmitPage() {
         </div>
       </Field>
 
-      <div className="flex justify-end">
+      <div className="mt-8 flex justify-end">
         <button
           type="submit"
           disabled={submitting || !profileReady}
-          className="rounded-md bg-primary px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl bg-blue-600 px-8 py-3.5 text-white font-bold shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-lg disabled:hover:bg-blue-600"
         >
-          {submitting ? 'Submitting...' : 'Submit'}
+          {submitting ? 'Submitting...' : 'Submit Bug'}
         </button>
+      </div>
       </div>
 
       {/* My Bugs inline section */}
-      <section className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">My Bugs</h3>
+      <section className="mt-12 border-t border-[var(--border-color)] pt-8">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-2xl font-bold tracking-tight">Recent Submissions</h3>
+            <p className="mt-1 text-sm text-[var(--muted-text)] font-medium">Quick glance at your latest bugs.</p>
+          </div>
           <input
             placeholder="Search my bugs..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="ml-4 rounded-md border px-3 py-2 text-sm"
+            className="w-full sm:w-64 rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] focus:bg-[var(--soft-surface)] px-4 py-2.5 text-sm outline-none transition-colors"
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {(myBugs || [])
             .filter((b) => {
               if (!query.trim()) return true
@@ -401,28 +416,34 @@ export default function SubmitPage() {
             .map((b) => (
               <a
                 key={b.id}
-                className="block rounded-md bg-white/60 p-4 shadow hover:shadow-md"
+                className="card block hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
                 href={`/dashboard/bugs/${b.id}`}
               >
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <div className="font-semibold">{b.title}</div>
-                    <div className="text-sm text-gray-500">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
+                    <div className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{b.title}</div>
+                    <div className="text-sm text-[var(--muted-text)] mt-1 font-medium">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
                   </div>
-                  <div className="text-sm text-right">
-                    <div className="text-gray-700">{b.severity}</div>
-                    <div className="text-gray-500">{b.status}</div>
+                  <div className="flex flex-wrap sm:flex-col items-end gap-2 text-sm">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${b.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>{b.severity}</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{b.status}</span>
                   </div>
                 </div>
               </a>
             ))}
+            
+          {(!myBugs || myBugs.length === 0) && (
+            <div className="text-center py-8 text-[var(--muted-text)] font-medium bg-[var(--soft-surface)] rounded-xl border border-dashed border-[var(--border-color)]">
+              No bugs found.
+            </div>
+          )}
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">Page {myPage}</div>
+        <div className="mt-8 flex items-center justify-between">
+          <div className="text-sm font-medium text-[var(--muted-text)]">Page <span className="text-[var(--text-color)]">{myPage}</span></div>
           <div className="flex gap-2">
-            <button disabled={myPage <= 1} onClick={() => setMyPage((p) => Math.max(1, p - 1))} className="rounded-md border px-3 py-1 text-sm">Prev</button>
-            <button onClick={() => setMyPage((p) => p + 1)} className="rounded-md border px-3 py-1 text-sm">Next</button>
+            <button disabled={myPage <= 1} onClick={() => setMyPage((p) => Math.max(1, p - 1))} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Prev</button>
+            <button onClick={() => setMyPage((p) => p + 1)} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Next</button>
           </div>
         </div>
       </section>

@@ -82,26 +82,30 @@ export default function TeamBugs() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold">Team Bugs</h2>
-      <p className="mt-4 text-sm text-gray-600">All bugs for your team.</p>
+      <div className="mb-6">
+        <h2 className="text-3xl font-extrabold tracking-tight">Team Bugs</h2>
+        <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">
+          All bugs for your team.
+        </p>
+      </div>
 
       <div className="mt-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">Filters</h3>
-            <p className="text-sm text-gray-500">Narrow down team bugs</p>
+            <h3 className="text-xl font-bold tracking-tight">Filters</h3>
+            <p className="text-sm text-[var(--muted-text)] font-medium">Narrow down team bugs</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowFilters((s) => !s)} className="rounded-md border px-3 py-1 text-sm">{showFilters ? 'Hide Filters' : 'Show Filters'}</button>
+            <button onClick={() => setShowFilters((s) => !s)} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors shadow-sm">{showFilters ? 'Hide Filters' : 'Show Filters'}</button>
           </div>
         </div>
 
         {showFilters && (
-          <div className="mt-4 rounded-md border bg-white p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="mt-4 card">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="mt-1 w-full rounded-md border p-2">
+                <label className="block text-sm font-semibold mb-1">Status</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
                   <option value="">Any</option>
                   <option value="open">Open</option>
                   <option value="in_progress">In Progress</option>
@@ -112,8 +116,8 @@ export default function TeamBugs() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Severity</label>
-                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="mt-1 w-full rounded-md border p-2">
+                <label className="block text-sm font-semibold mb-1">Severity</label>
+                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
                   <option value="">Any</option>
                   <option value="critical">Critical</option>
                   <option value="high">High</option>
@@ -123,14 +127,14 @@ export default function TeamBugs() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
-                <input value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} placeholder="e.g. ui-bug or typo" className="mt-1 w-full rounded-md border p-2" />
+                <label className="block text-sm font-semibold mb-1">Category</label>
+                <input value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} placeholder="e.g. ui-bug or typo" className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" />
               </div>
             </div>
 
-            <div className="mt-3 flex gap-2">
-              <button onClick={() => { setPage(1); setShowFilters(false); }} className="rounded-md bg-primary px-3 py-1 text-white text-sm">Apply</button>
-              <button onClick={() => { setStatusFilter(''); setSeverityFilter(''); setCategoryFilter(''); setPage(1); }} className="rounded-md border px-3 py-1 text-sm">Clear</button>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => { setPage(1); setShowFilters(false); }} className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-white text-sm font-bold shadow-md transition-colors">Apply</button>
+              <button onClick={() => { setStatusFilter(''); setSeverityFilter(''); setCategoryFilter(''); setPage(1); }} className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] hover:bg-[var(--border-color)] px-5 py-2.5 text-sm font-bold transition-colors">Clear</button>
             </div>
           </div>
         )}
@@ -139,29 +143,29 @@ export default function TeamBugs() {
         {error && <div className="text-red-600">{error}</div>}
         {!loading && !error && bugs.length === 0 && <div className="text-gray-500">No bugs found for your team.</div>}
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-6 space-y-4">
           {bugs.map((b) => (
-            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="block p-4 bg-white/60 rounded-md shadow hover:shadow-md">
-              <div className="flex justify-between">
+            <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="card block hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <div className="font-semibold">{b.title}</div>
-                  <div className="text-sm text-gray-500">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
-                  {b.category && <div className="mt-1 text-xs text-slate-600">Category: {b.category}</div>}
+                  <div className="font-bold text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{b.title}</div>
+                  <div className="text-sm text-[var(--muted-text)] mt-1 font-medium">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
+                  {b.category && <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-[var(--soft-surface)] text-[var(--muted-text)] border border-[var(--border-color)]">Category: {b.category}</div>}
                 </div>
-                <div className="text-sm text-right">
-                  <div className="text-gray-700">{b.severity}</div>
-                  <div className="text-gray-500">{b.status}</div>
+                <div className="flex flex-wrap sm:flex-col items-end gap-2 text-sm">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${b.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>{b.severity}</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{b.status}</span>
                 </div>
               </div>
             </Link>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">Page {page} of {totalPages} — {total} results</div>
+        <div className="mt-8 flex items-center justify-between border-t border-[var(--border-color)] pt-4">
+          <div className="text-sm font-medium text-[var(--muted-text)]">Page <span className="text-[var(--text-color)]">{page}</span> of <span className="text-[var(--text-color)]">{totalPages}</span> — <span className="text-[var(--text-color)]">{total}</span> results</div>
           <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-md border px-3 py-1 text-sm">Prev</button>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded-md border px-3 py-1 text-sm">Next</button>
+            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Prev</button>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] hover:bg-[var(--soft-surface)] px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50">Next</button>
           </div>
         </div>
       </div>
