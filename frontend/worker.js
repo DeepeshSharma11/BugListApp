@@ -7,7 +7,7 @@ export default {
       const targetUrl = new URL(request.url);
       targetUrl.protocol = 'http:';
       targetUrl.hostname = '52.207.217.229';
-      targetUrl.port = '8000';
+      targetUrl.port = '80';
       
       // We create a new request with the updated URL
       const newRequest = new Request(targetUrl.toString(), request);
