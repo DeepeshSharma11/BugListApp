@@ -11,6 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from supabase import create_client
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +37,11 @@ sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 app = FastAPI(title="Bug Tracker API")
 
+# --- Rate Limiter ---
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Allow local frontend dev server
 app.add_middleware(
     CORSMiddleware,
@@ -55,7 +63,8 @@ def compute_fingerprint(title: str, description: str, environment: str) -> str:
 
 
 @app.get("/api/bugs/check")
-def check_duplicate(title: str, description: str = "", environment: str = ""):
+@limiter.limit("30/minute")
+def check_duplicate(request: Request, title: str, description: str = "", environment: str = ""):
     """Compute fingerprint server-side and check for existing bug.
     Returns 200 + {exists:false} or 200 + {exists:true, id, title}
     """
@@ -76,7 +85,8 @@ def check_duplicate(title: str, description: str = "", environment: str = ""):
 
 
 @app.get("/api/bugs/{bug_id}")
-def get_bug(bug_id: str):
+@limiter.limit("60/minute")
+def get_bug(request: Request, bug_id: str):
     try:
         res = sb.table("bugs").select("*").eq("id", bug_id).execute()
     except Exception:
@@ -91,7 +101,9 @@ def get_bug(bug_id: str):
 
 
 @app.get("/api/bugs")
+@limiter.limit("60/minute")
 def list_bugs(
+    request: Request,
     submitted_by: Optional[str] = None,
     team_id: Optional[str] = None,
     page: int = 1,
@@ -175,7 +187,9 @@ def list_bugs(
 
 
 @app.post("/api/bugs/")
+@limiter.limit("5/minute")
 def create_bug(
+    request: Request,
     title: str = Form(...),
     description: str = Form(...),
     steps_to_reproduce: Optional[str] = Form(None),
@@ -315,7 +329,8 @@ def create_bug(
 
 
 @app.post("/api/bugs/{bug_id}/screenshots")
-def update_screenshots(bug_id: str, urls: List[str]):
+@limiter.limit("20/minute")
+def update_screenshots(request: Request, bug_id: str, urls: List[str]):
     """Update screenshot_urls for a bug. Accepts JSON array of URLs."""
     upd = sb.table("bugs").update({"screenshot_urls": urls}).eq("id", bug_id).execute()
     if getattr(upd, "error", None):
@@ -335,6 +350,7 @@ def _require_admin(request: Request):
 
 
 @app.post("/api/admin/bugs/cleanup")
+@limiter.limit("5/minute")
 def admin_cleanup(request: Request, days: int = 90, dry_run: bool = True):
     """Delete bugs older than `days`. Protected by `x-admin-secret` header.
     If `dry_run` is true, returns count but does not delete.
@@ -375,6 +391,7 @@ def admin_cleanup(request: Request, days: int = 90, dry_run: bool = True):
 
 
 @app.get("/api/admin/notifications")
+@limiter.limit("30/minute")
 def admin_list_notifications(request: Request, recipient_id: Optional[str] = None, limit: int = 50):
     """Admin-only: list recent notifications (for debugging)."""
     _require_admin(request)
@@ -433,7 +450,8 @@ class BugUpdate(BaseModel):
 
 
 @app.patch("/api/bugs/{bug_id}")
-def update_bug(bug_id: str, update: BugUpdate):
+@limiter.limit("20/minute")
+def update_bug(request: Request, bug_id: str, update: BugUpdate):
     """Partial update for bug. Triggers in DB will generate notifications as needed."""
     allowed_fields = {k: v for k, v in update.dict().items() if v is not None}
     if not allowed_fields:

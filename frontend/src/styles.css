@@ -4,6 +4,13 @@
 
 html, body, #root { height: 100%; }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 :root {
   --bg-start: #fffdf8;
   --bg-mid: #f1f7ff;
