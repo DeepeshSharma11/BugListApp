@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { getAuthState } from '../lib/auth';
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +14,7 @@ export default function NavBar() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      checkAdmin(session);
+      void checkAdmin(session);
     });
 
     // Listen for auth changes
@@ -21,25 +22,15 @@ export default function NavBar() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      checkAdmin(session);
+      void checkAdmin(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const checkAdmin = async (currentSession: any) => {
-    if (!currentSession?.user) {
-      setIsAdmin(false);
-      return;
-    }
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', currentSession.user.id)
-      .single();
-
-    setIsAdmin(data?.role === 'admin' || data?.role === 'super_admin');
+    const authState = await getAuthState(currentSession ?? null);
+    setIsAdmin(authState.isAdmin);
   };
 
   const handleLogout = async () => {

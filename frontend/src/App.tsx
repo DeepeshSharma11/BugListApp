@@ -1,7 +1,8 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
-import ProtectedRoute from './components/ProtectedRoute'
+import UserRoute from './components/UserRoute'
+import AdminRoute from './components/AdminRoute'
 import SubmitPage from './pages/dashboard/Submit'
 import MyBugs from './pages/dashboard/MyBugs'
 import TeamBugs from './pages/dashboard/TeamBugs'
@@ -25,7 +26,7 @@ export default function App() {
       {/* Main App Routes */}
       <Route path="/" element={<Navigate to="/dashboard" />} />
       
-      <Route element={<ProtectedRoute />}>
+      <Route element={<UserRoute />}>
         <Route path="/" element={<Layout />}>
           <Route path="dashboard">
             <Route index element={<Navigate to="submit" />} />
@@ -36,7 +37,7 @@ export default function App() {
             <Route path="profile" element={<Profile />} />
           </Route>
           
-          <Route element={<ProtectedRoute requireAdmin={true} />}>
+          <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
           </Route>
         </Route>

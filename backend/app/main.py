@@ -1,6 +1,7 @@
 import os
 import hashlib
 import mimetypes
+import logging
 from uuid import uuid4
 from typing import List, Optional
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException
@@ -8,13 +9,22 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from supabase import create_client
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    logger.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
     raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
 
+logger.info("Initializing Supabase client...")
 sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 app = FastAPI(title="Bug Tracker API")
@@ -46,8 +56,11 @@ def create_bug(
     team_id: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
 ):
+    logger.info(f"Received request to create bug: '{title}' by user {submitted_by} for team {team_id}")
+    
     # Validate lengths
     if len(description or "") < 20:
+        logger.warning(f"Bug creation failed: description too short ({len(description or '')} chars)")
         raise HTTPException(status_code=400, detail="Description must be at least 20 characters")
 
     # Compute fingerprint
@@ -55,14 +68,17 @@ def create_bug(
     # Check duplicate
     res = sb.table("bugs").select("id,title").eq("fingerprint", fingerprint).execute()
     if res.error:
+        logger.error(f"Database error during fingerprint check: {res.error}")
         raise HTTPException(status_code=500, detail="DB error")
     if res.data and len(res.data) > 0:
         existing = res.data[0]
+        logger.info(f"Duplicate bug found: {existing['id']}")
         return JSONResponse(status_code=409, content={"detail": "duplicate", "id": existing["id"], "title": existing["title"]})
 
     # Resolve team slug (useful for client-side uploads)
     team_res = sb.table("teams").select("slug").eq("id", team_id).execute()
     if team_res.error or not team_res.data:
+        logger.error(f"Team validation failed for team_id: {team_id}")
         raise HTTPException(status_code=400, detail="Invalid team_id or cannot find team slug")
     team_slug = team_res.data[0]["slug"]
 
