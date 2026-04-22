@@ -8,6 +8,7 @@ type Bug = {
   severity: string
   status: string
   priority: string
+  category?: string
   created_at: string
 }
 
@@ -77,6 +78,7 @@ export default function MyBugs() {
                 <div>
                   <div className="font-semibold">{b.title}</div>
                   <div className="text-sm text-gray-500">{new Date(b.created_at).toLocaleString()}</div>
+                  {b.category && <div className="mt-1 text-xs text-slate-600">Category: {b.category}</div>}
                 </div>
                 <div className="text-sm text-right">
                   <div className="text-gray-700">{b.severity}</div>

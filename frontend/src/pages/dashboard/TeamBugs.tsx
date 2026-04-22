@@ -8,6 +8,7 @@ type Bug = {
   severity?: string
   status?: string
   priority?: string
+  category?: string
   created_at?: string
 }
 
@@ -19,6 +20,10 @@ export default function TeamBugs() {
   const perPage = 10
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('')
+  const [severityFilter, setSeverityFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -35,7 +40,15 @@ export default function TeamBugs() {
           return
         }
 
-        const res = await fetch(`/api/bugs?team_id=${encodeURIComponent(teamId)}&page=${page}&per_page=${perPage}`)
+        const params = new URLSearchParams()
+        params.set('team_id', teamId)
+        params.set('page', String(page))
+        params.set('per_page', String(perPage))
+        if (statusFilter) params.set('status', statusFilter)
+        if (severityFilter) params.set('severity', severityFilter)
+        if (categoryFilter) params.set('category', categoryFilter)
+
+        const res = await fetch(`/api/bugs?${params.toString()}`)
         if (!res.ok) {
           const j = await res.json().catch(() => null)
           if (mounted) setError((j && j.detail) || 'Failed to load team bugs')
@@ -60,7 +73,7 @@ export default function TeamBugs() {
     return () => {
       mounted = false
     }
-  }, [page])
+  }, [page, statusFilter, severityFilter, categoryFilter])
 
   return (
     <div>
@@ -68,6 +81,55 @@ export default function TeamBugs() {
       <p className="mt-4 text-sm text-gray-600">All bugs for your team.</p>
 
       <div className="mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Filters</h3>
+            <p className="text-sm text-gray-500">Narrow down team bugs</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowFilters((s) => !s)} className="rounded-md border px-3 py-1 text-sm">{showFilters ? 'Hide Filters' : 'Show Filters'}</button>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="mt-4 rounded-md border bg-white p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="mt-1 w-full rounded-md border p-2">
+                  <option value="">Any</option>
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Severity</label>
+                <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)} className="mt-1 w-full rounded-md border p-2">
+                  <option value="">Any</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <input value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} placeholder="e.g. ui-bug or typo" className="mt-1 w-full rounded-md border p-2" />
+              </div>
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <button onClick={() => { setPage(1); setShowFilters(false); }} className="rounded-md bg-primary px-3 py-1 text-white text-sm">Apply</button>
+              <button onClick={() => { setStatusFilter(''); setSeverityFilter(''); setCategoryFilter(''); setPage(1); }} className="rounded-md border px-3 py-1 text-sm">Clear</button>
+            </div>
+          </div>
+        )}
+
         {loading && <div>Loading...</div>}
         {error && <div className="text-red-600">{error}</div>}
         {!loading && !error && bugs.length === 0 && <div className="text-gray-500">No bugs found for your team.</div>}
@@ -79,6 +141,7 @@ export default function TeamBugs() {
                 <div>
                   <div className="font-semibold">{b.title}</div>
                   <div className="text-sm text-gray-500">{b.created_at ? new Date(b.created_at).toLocaleString() : ''}</div>
+                  {b.category && <div className="mt-1 text-xs text-slate-600">Category: {b.category}</div>}
                 </div>
                 <div className="text-sm text-right">
                   <div className="text-gray-700">{b.severity}</div>

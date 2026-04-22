@@ -91,7 +91,16 @@ def get_bug(bug_id: str):
 
 
 @app.get("/api/bugs")
-def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None, page: int = 1, per_page: int = 20):
+def list_bugs(
+    submitted_by: Optional[str] = None,
+    team_id: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 20,
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    priority: Optional[str] = None,
+    category: Optional[str] = None,
+):
     if page < 1:
         page = 1
     if per_page < 1:
@@ -101,11 +110,22 @@ def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None,
 
     try:
         # Build base query and request exact count
-        query = sb.table("bugs").select("id,title,severity,status,priority,submitted_by,team_id,created_at", count="exact")
+        query = sb.table("bugs").select(
+            "id,title,severity,status,priority,submitted_by,team_id,created_at,category",
+            count="exact",
+        )
         if submitted_by:
             query = query.eq("submitted_by", submitted_by)
         if team_id:
             query = query.eq("team_id", team_id)
+        if status:
+            query = query.eq("status", status)
+        if severity:
+            query = query.eq("severity", severity)
+        if priority:
+            query = query.eq("priority", priority)
+        if category:
+            query = query.eq("category", category)
         offset = (page - 1) * per_page
         res = query.order("created_at", desc=True).range(offset, offset + per_page - 1).execute()
     except Exception:
@@ -126,6 +146,14 @@ def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None,
                 count_res = count_res.eq("submitted_by", submitted_by)
             if team_id:
                 count_res = count_res.eq("team_id", team_id)
+            if status:
+                count_res = count_res.eq("status", status)
+            if severity:
+                count_res = count_res.eq("severity", severity)
+            if priority:
+                count_res = count_res.eq("priority", priority)
+            if category:
+                count_res = count_res.eq("category", category)
             count_exec = count_res.execute()
             total = getattr(count_exec, "count", None) or (len(getattr(count_exec, "data", []) or []))
         except Exception:
@@ -134,6 +162,8 @@ def list_bugs(submitted_by: Optional[str] = None, team_id: Optional[str] = None,
 
     total = int(total or 0)
     total_pages = math.ceil(total / per_page) if per_page > 0 else 1
+    # Ensure at least one page to keep frontend UI sane
+    total_pages = max(1, int(total_pages))
 
     return {
         "items": items,
@@ -199,6 +229,8 @@ def create_bug(
 
     # Insert bug (without screenshots first)
     tags_arr = [t.strip() for t in (tags or "").split(",") if t.strip()]
+    # If tags were used to send category/customCategory, persist the first tag as `category` for filtering
+    category_val = tags_arr[0] if len(tags_arr) > 0 else None
     bug_obj = {
         "title": title,
         "description": description,
@@ -209,6 +241,7 @@ def create_bug(
         "priority": priority,
         "environment": environment,
         "version": version,
+        "category": category_val,
         "screenshot_urls": [],
         "submitted_by": submitted_by,
         "team_id": team_id,
@@ -341,6 +374,54 @@ def admin_cleanup(request: Request, days: int = 90, dry_run: bool = True):
     return {"deleted": deleted_count, "match_count": total, "dry_run": False}
 
 
+@app.get("/api/admin/notifications")
+def admin_list_notifications(request: Request, recipient_id: Optional[str] = None, limit: int = 50):
+    """Admin-only: list recent notifications (for debugging)."""
+    _require_admin(request)
+    try:
+        query = sb.table("notifications").select("*").order("created_at", desc=True).limit(limit)
+        if recipient_id:
+            query = query.eq("recipient_id", recipient_id)
+        res = query.execute()
+    except Exception:
+        logger.exception("Exception when querying notifications")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    return getattr(res, "data", [])
+
+
+@app.post("/api/admin/debug_notify")
+def admin_debug_notify(
+    request: Request,
+    recipient_id: str = Form(...),
+    p_type: str = Form(...),
+    p_title: str = Form(...),
+    p_message: str = Form(...),
+    p_entity_type: Optional[str] = Form(None),
+    p_entity_id: Optional[str] = Form(None),
+):
+    """Admin-only: call DB `create_notification` function to create a notification for testing."""
+    _require_admin(request)
+    try:
+        # Call the DB function via RPC
+        rpc_params = {
+            "p_recipient_id": recipient_id,
+            "p_type": p_type,
+            "p_title": p_title,
+            "p_message": p_message,
+            "p_entity_type": p_entity_type,
+            "p_entity_id": p_entity_id,
+        }
+        res = sb.rpc("create_notification", rpc_params).execute()
+    except Exception:
+        logger.exception("Exception when calling create_notification RPC")
+        raise HTTPException(status_code=500, detail="RPC error")
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="RPC error")
+    return {"ok": True}
+
+
 class BugUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -348,6 +429,7 @@ class BugUpdate(BaseModel):
     priority: Optional[str] = None
     status: Optional[str] = None
     assigned_to: Optional[str] = None
+    category: Optional[str] = None
 
 
 @app.patch("/api/bugs/{bug_id}")
@@ -356,6 +438,15 @@ def update_bug(bug_id: str, update: BugUpdate):
     allowed_fields = {k: v for k, v in update.dict().items() if v is not None}
     if not allowed_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
+    # Log before update for debugging notification triggers
+    try:
+        before_res = sb.table("bugs").select("status,assigned_to,submitted_by,title").eq("id", bug_id).execute()
+    except Exception:
+        logger.exception("Exception when fetching bug before update")
+        before_res = None
+    before = (getattr(before_res, "data", []) or [None])[0]
+    logger.info(f"Updating bug {bug_id} - before: {before}")
+
     try:
         res = sb.table("bugs").update(allowed_fields).eq("id", bug_id).execute()
     except Exception:
@@ -367,4 +458,6 @@ def update_bug(bug_id: str, update: BugUpdate):
     data = getattr(res, "data", None)
     if not data:
         raise HTTPException(status_code=404, detail="Bug not found or not updated")
+    # Log after update for debugging
+    logger.info(f"Updated bug {bug_id} - after: {data[0]}")
     return data[0]
