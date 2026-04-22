@@ -86,3 +86,24 @@ USING (bucket_id = 'bug-screenshots');
 CREATE POLICY "Authenticated users can upload" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'bug-screenshots' AND auth.role() = 'authenticated');
+
+-- Create a trigger to automatically create a profile for every new user
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'full_name',
+    'member' -- default role
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Attach the trigger to the auth.users table
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
