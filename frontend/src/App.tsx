@@ -17,6 +17,11 @@ import Signup from './pages/auth/Signup'
 import ResetPassword from './pages/auth/ResetPassword'
 import UpdatePassword from './pages/auth/UpdatePassword'
 
+// Support & Legal
+import PrivacyPolicy from './pages/support/PrivacyPolicy'
+import TermsOfService from './pages/support/TermsOfService'
+import Support from './pages/support/Support'
+
 export default function App() {
   return (
     <Routes>
@@ -39,6 +44,9 @@ export default function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="bugs/:id" element={<BugDetail />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="privacy" element={<PrivacyPolicy />} />
+            <Route path="terms" element={<TermsOfService />} />
+            <Route path="support" element={<Support />} />
           </Route>
           
           <Route element={<AdminRoute />}>

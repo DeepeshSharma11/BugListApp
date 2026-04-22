@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Footer() {
   return (
@@ -6,9 +7,9 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-between gap-4 md:flex-row">
         <p className="text-center text-sm text-[var(--muted-text)] md:text-left">&copy; {new Date().getFullYear()} Bug Tracker. All rights reserved.</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm text-[var(--muted-text)] sm:gap-6">
-          <a href="#" className="transition-colors hover:text-[var(--text-color)]">Privacy Policy</a>
-          <a href="#" className="transition-colors hover:text-[var(--text-color)]">Terms of Service</a>
-          <a href="#" className="transition-colors hover:text-[var(--text-color)]">Support</a>
+          <Link to="/dashboard/privacy" className="transition-colors hover:text-[var(--text-color)]">Privacy Policy</Link>
+          <Link to="/dashboard/terms" className="transition-colors hover:text-[var(--text-color)]">Terms of Service</Link>
+          <Link to="/dashboard/support" className="transition-colors hover:text-[var(--text-color)]">Support</Link>
         </div>
       </div>
     </footer>
