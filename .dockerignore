@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/.wrangler/
+
+# Build outputs
+frontend/dist/
+
+# Git
+.git/
+.gitignore
+
+# Backend env is injected at runtime via docker-compose env_file
+backend/.env
+# NOTE: frontend/.env is intentionally NOT excluded — Vite needs it at build time
+
+# Misc
+*.log
+.DS_Store
+README.md
+mobile/
