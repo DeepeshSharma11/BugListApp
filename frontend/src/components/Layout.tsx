@@ -5,10 +5,10 @@ import Footer from './Footer'
 
 export default function Layout() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col bg-transparent text-[var(--text-color)] font-sans transition-colors">
       <NavBar />
 
-      <main className="flex-grow w-full py-6 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto flex flex-col">
+      <main className="mx-auto flex w-full max-w-6xl flex-grow flex-col px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <div className="card flex-grow flex flex-col w-full">
           <Outlet />
         </div>

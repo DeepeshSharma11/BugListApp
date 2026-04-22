@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getAuthState } from '../lib/auth';
+import { useTheme } from '../context/ThemeContext';
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,6 +10,7 @@ export default function NavBar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Get initial session
@@ -51,17 +53,17 @@ export default function NavBar() {
     : baseNavLinks;
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+    <header className="sticky top-0 z-50 border-b border-[var(--border-color)] bg-[var(--surface-color)]/90 shadow-sm backdrop-blur">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex min-h-16 items-center justify-between gap-3 py-2">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
                 BT
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold leading-tight text-gray-900">Bug Tracker</h1>
-                <p className="text-xs text-gray-500 font-medium">Workspace</p>
+                <h1 className="text-lg font-semibold leading-tight text-[var(--text-color)]">Bug Tracker</h1>
+                <p className="text-xs font-medium text-[var(--muted-text)]">Workspace</p>
               </div>
             </Link>
           </div>
@@ -76,7 +78,7 @@ export default function NavBar() {
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     location.pathname.startsWith(link.path)
                       ? 'bg-blue-50 text-blue-700 shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
                   }`}
                 >
                   {link.name}
@@ -84,19 +86,29 @@ export default function NavBar() {
               ))}
             </nav>
             
-            {/* Auth Actions (Reduced CTA) */}
-            <div className="flex items-center pl-4 border-l border-gray-200">
+            <div className="mr-3">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="inline-flex items-center rounded-md border border-[var(--border-color)] bg-[var(--soft-surface)] px-3 py-2 text-sm font-medium text-[var(--text-color)] transition hover:opacity-90"
+              >
+                {theme === 'dark' ? 'Light' : 'Dark'}
+              </button>
+            </div>
+
+            {/* Auth Actions */}
+            <div className="flex items-center pl-4 border-l border-[var(--border-color)]">
               {session ? (
                 <button
                   onClick={handleLogout}
-                  className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                  className="text-sm font-medium text-[var(--muted-text)] transition-colors hover:text-[var(--text-color)]"
                 >
                   Log out
                 </button>
               ) : (
                 <Link
                   to="/login"
-                  className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                  className="text-sm font-medium text-[var(--muted-text)] transition-colors hover:text-[var(--text-color)]"
                 >
                   Log in
                 </Link>
@@ -108,7 +120,7 @@ export default function NavBar() {
           <div className="flex md:hidden items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none p-2 rounded-md transition-colors"
+              className="rounded-md p-2 text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)] focus:outline-none"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +137,7 @@ export default function NavBar() {
 
       {/* Mobile Nav */}
       {isOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white">
+        <div className="md:hidden border-t border-[var(--border-color)] bg-[var(--surface-color)]">
           <div className="px-4 pt-2 pb-4 space-y-1 shadow-inner">
             {navLinks.map((link) => (
               <Link
@@ -135,18 +147,25 @@ export default function NavBar() {
                 className={`block px-4 py-3 rounded-md text-base font-medium transition-colors ${
                   location.pathname.startsWith(link.path)
                     ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
                 }`}
               >
                 {link.name}
               </Link>
             ))}
             
-            <div className="border-t border-gray-100 mt-2 pt-2">
+            <div className="mt-2 border-t border-[var(--border-color)] pt-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
+              >
+                Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
+              </button>
               {session ? (
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left px-4 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
                 >
                   Log out
                 </button>
@@ -154,7 +173,7 @@ export default function NavBar() {
                 <Link
                   to="/login"
                   onClick={() => setIsOpen(false)}
-                  className="block w-full text-left px-4 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
                 >
                   Log in
                 </Link>
