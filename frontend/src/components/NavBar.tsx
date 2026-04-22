@@ -8,6 +8,7 @@ export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -17,6 +18,7 @@ export default function NavBar() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       void checkAdmin(session);
+      void loadUnreadNotifications(session);
     });
 
     // Listen for auth changes
@@ -25,14 +27,36 @@ export default function NavBar() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       void checkAdmin(session);
+      void loadUnreadNotifications(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    void loadUnreadNotifications(session);
+  }, [location.pathname, session]);
+
   const checkAdmin = async (currentSession: any) => {
     const authState = await getAuthState(currentSession ?? null);
     setIsAdmin(authState.isAdmin);
+  };
+
+  const loadUnreadNotifications = async (currentSession: any) => {
+    if (!currentSession?.user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', currentSession.user.id)
+      .eq('is_read', false);
+
+    if (!error) {
+      setUnreadCount(count ?? 0);
+    }
   };
 
   const handleLogout = async () => {
@@ -45,6 +69,7 @@ export default function NavBar() {
     { name: 'Submit', path: '/dashboard/submit' },
     { name: 'My Bugs', path: '/dashboard/my-bugs' },
     { name: 'Team', path: '/dashboard/team' },
+    { name: 'Notifications', path: '/dashboard/notifications' },
     { name: 'Profile', path: '/dashboard/profile' },
   ];
 
@@ -81,7 +106,14 @@ export default function NavBar() {
                       : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
                   }`}
                 >
-                  {link.name}
+                  <span className="inline-flex items-center gap-2">
+                    <span>{link.name}</span>
+                    {link.path === '/dashboard/notifications' && unreadCount > 0 && (
+                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               ))}
             </nav>
@@ -150,7 +182,14 @@ export default function NavBar() {
                     : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
                 }`}
               >
-                {link.name}
+                <span className="inline-flex items-center gap-2">
+                  <span>{link.name}</span>
+                  {link.path === '/dashboard/notifications' && unreadCount > 0 && (
+                    <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
             

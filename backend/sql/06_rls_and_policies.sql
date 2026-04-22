@@ -3,6 +3,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bugs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bug_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bug_activity_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Authenticated users can view teams" ON public.teams;
 CREATE POLICY "Authenticated users can view teams"
@@ -111,3 +112,18 @@ ON public.bug_activity_log
 FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = actor_id);
+
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
+CREATE POLICY "Users can view own notifications"
+ON public.notifications
+FOR SELECT
+TO authenticated
+USING (auth.uid() = recipient_id);
+
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+CREATE POLICY "Users can update own notifications"
+ON public.notifications
+FOR UPDATE
+TO authenticated
+USING (auth.uid() = recipient_id)
+WITH CHECK (auth.uid() = recipient_id);

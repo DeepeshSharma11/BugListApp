@@ -8,6 +8,7 @@ import MyBugs from './pages/dashboard/MyBugs'
 import TeamBugs from './pages/dashboard/TeamBugs'
 import BugDetail from './pages/dashboard/BugDetail'
 import Profile from './pages/dashboard/Profile'
+import Notifications from './pages/dashboard/Notifications'
 import AdminDashboard from './pages/admin/AdminDashboard'
 
 // Auth Pages
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="submit" element={<SubmitPage />} />
             <Route path="my-bugs" element={<MyBugs />} />
             <Route path="team" element={<TeamBugs />} />
+            <Route path="notifications" element={<Notifications />} />
             <Route path="bugs/:id" element={<BugDetail />} />
             <Route path="profile" element={<Profile />} />
           </Route>

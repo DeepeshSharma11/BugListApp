@@ -56,3 +56,15 @@ CREATE TABLE IF NOT EXISTS public.bug_activity_log (
   new_value text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipient_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  entity_type text,
+  entity_id uuid,
+  is_read boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
