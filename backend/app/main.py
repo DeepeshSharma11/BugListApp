@@ -6,9 +6,15 @@ from uuid import uuid4
 from typing import List, Optional
 import math
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+class SupportTicketRequest(BaseModel):
+    user_id: Optional[str] = None
+    user_email: str
+    subject: str
+    message: str
 from dotenv import load_dotenv
 from supabase import create_client
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -482,3 +488,26 @@ def update_bug(request: Request, bug_id: str, update: BugUpdate):
     # Log after update for debugging
     logger.info(f"Updated bug {bug_id} - after: {data[0]}")
     return data[0]
+
+@app.post("/api/support")
+@limiter.limit("5/minute")
+def create_support_ticket(request: Request, ticket: SupportTicketRequest):
+    logger.info(f"Received support ticket from {ticket.user_email}")
+    try:
+        data = {
+            "user_email": ticket.user_email,
+            "subject": ticket.subject,
+            "message": ticket.message,
+        }
+        if ticket.user_id:
+            data["user_id"] = ticket.user_id
+            
+        res = sb.table("support_tickets").insert(data).execute()
+        if getattr(res, "error", None):
+            logger.error(f"Failed to create support ticket: {res.error}")
+            raise HTTPException(status_code=500, detail="Failed to submit ticket")
+            
+        return {"status": "success", "message": "Ticket submitted successfully"}
+    except Exception as e:
+        logger.exception("Error creating support ticket")
+        raise HTTPException(status_code=500, detail="Internal server error")

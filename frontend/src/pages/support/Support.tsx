@@ -1,11 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAuthState } from '../../lib/auth';
 
 export default function Support() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [subject, setSubject] = useState('Technical Issue');
+  const [message, setMessage] = useState('');
+  
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const initAuth = async () => {
+      const auth = await getAuthState();
+      if (auth.session?.user) {
+        setUserId(auth.session.user.id);
+        setUserEmail(auth.session.user.email || '');
+      }
+    };
+    void initAuth();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!message.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          user_email: userEmail,
+          subject: subject,
+          message: message,
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit ticket');
+      }
+
+      setSubmitted(true);
+      setMessage('');
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -16,7 +63,7 @@ export default function Support() {
       {submitted ? (
         <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-600 dark:text-emerald-400 p-6 rounded-2xl text-center">
           <h2 className="text-xl font-bold mb-2">Message Sent!</h2>
-          <p>Thank you for reaching out. We will get back to you shortly at your registered email.</p>
+          <p>Thank you for reaching out. We will get back to you shortly at {userEmail}.</p>
           <button 
             onClick={() => setSubmitted(false)}
             className="mt-4 text-sm font-bold text-blue-600 hover:underline"
@@ -29,10 +76,20 @@ export default function Support() {
           <div className="card bg-[var(--soft-surface)] border-none">
             <h2 className="text-lg font-bold mb-4">Contact Support</h2>
             
+            {error && (
+              <div className="mb-4 bg-red-500/10 border border-red-500/50 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1.5">Subject</label>
-                <select className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option>Technical Issue</option>
                   <option>Account Access</option>
                   <option>Feature Request</option>
@@ -46,6 +103,8 @@ export default function Support() {
                 <textarea 
                   required
                   rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   placeholder="Describe your issue in detail..."
                   className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--card-color)] px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500"
                 ></textarea>
@@ -53,9 +112,10 @@ export default function Support() {
 
               <button 
                 type="submit"
-                className="w-full rounded-xl bg-blue-600 py-3 text-white font-bold hover:bg-blue-700 transition-colors shadow-md"
+                disabled={loading}
+                className="w-full rounded-xl bg-blue-600 py-3 text-white font-bold hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Send Message
+                {loading ? 'Sending...' : 'Send Message'}
               </button>
             </div>
           </div>
