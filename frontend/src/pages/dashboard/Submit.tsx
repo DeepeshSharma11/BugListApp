@@ -41,6 +41,7 @@ export default function SubmitPage() {
   const [teamId, setTeamId] = useState<string | null>(null)
   const [submittedBy, setSubmittedBy] = useState<string | null>(null)
   const [profileReady, setProfileReady] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles((current) => [...current, ...acceptedFiles].slice(0, 5))
@@ -97,7 +98,7 @@ export default function SubmitPage() {
     return () => {
       mounted = false
     }
-  }, [profileReady, submittedBy, myPage])
+  }, [profileReady, submittedBy, myPage, refreshTrigger])
 
   useEffect(() => {
     if (!debouncedTitle || description.trim().length < 5) {
@@ -246,6 +247,7 @@ export default function SubmitPage() {
       setCustomCategory('')
       setFiles([])
       setDuplicate(null)
+      setRefreshTrigger(prev => prev + 1)
       alert(`Bug submitted successfully: ${bugId}`)
     } catch (error) {
       console.error('Submit failed:', error)
