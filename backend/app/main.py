@@ -497,6 +497,31 @@ def update_bug(request: Request, bug_id: str, update: BugUpdate):
     logger.info(f"Updated bug {bug_id} - after: {data[0]}")
     return data[0]
 
+@app.get("/api/leaderboard")
+@limiter.limit("30/minute")
+def get_leaderboard(request: Request, team_id: str):
+    """Return team members ranked by resolved bugs count.
+    Uses a DB-side aggregation function for a single fast query.
+    """
+    if not team_id:
+        raise HTTPException(status_code=400, detail="team_id required")
+    try:
+        res = sb.rpc("get_team_leaderboard", {"p_team_id": team_id}).execute()
+    except Exception:
+        logger.exception("Exception when fetching leaderboard")
+        raise HTTPException(status_code=500, detail="DB error")
+    if getattr(res, "error", None):
+        raise HTTPException(status_code=500, detail="DB error")
+    data = getattr(res, "data", []) or []
+    # Add rank field and resolution rate
+    for i, row in enumerate(data):
+        row["rank"] = i + 1
+        total = int(row.get("total_assigned") or 0)
+        resolved = int(row.get("resolved_count") or 0)
+        row["resolution_rate"] = round((resolved / total * 100) if total > 0 else 0, 1)
+    return data
+
+
 @app.post("/api/support")
 @limiter.limit("5/minute")
 def create_support_ticket(request: Request, ticket: SupportTicketRequest):

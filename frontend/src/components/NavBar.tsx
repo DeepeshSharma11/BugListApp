@@ -15,6 +15,7 @@ const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
 const ICONS: Record<string, string> = {
   Submit:          'M12 5v14M5 12l7-7 7 7',
   Team:            'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  Leaderboard:     'M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z',
   Notifications:   'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
   Profile:         'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
   Admin:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
@@ -95,6 +96,7 @@ export default function NavBar() {
   const baseLinks = [
     { name: 'Submit',        path: '/dashboard/submit' },
     { name: 'Team',          path: '/dashboard/team' },
+    { name: 'Leaderboard',   path: '/dashboard/leaderboard' },
     { name: 'Notifications', path: '/dashboard/notifications' },
     { name: 'Profile',       path: '/dashboard/profile' },
   ];

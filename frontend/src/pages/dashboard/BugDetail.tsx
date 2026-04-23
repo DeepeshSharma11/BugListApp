@@ -67,7 +67,7 @@ export default function BugDetail() {
             {bug.severity}
           </span>
         </div>
-        <h2 className="text-3xl font-extrabold tracking-tight">{bug.title}</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{bug.title}</h2>
         <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">Bug ID: {bug.id}</p>
       </div>
 
@@ -75,7 +75,7 @@ export default function BugDetail() {
         <div className="lg:col-span-2 space-y-8">
           <section className="card">
             <h3 className="text-lg font-bold mb-4">Description</h3>
-            <div className="text-[var(--text-color)] whitespace-pre-wrap leading-relaxed">{bug.description}</div>
+            <div className="text-[var(--text-color)] whitespace-pre-wrap leading-relaxed" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{bug.description}</div>
           </section>
 
           {bug.screenshot_urls && bug.screenshot_urls.length > 0 && (
