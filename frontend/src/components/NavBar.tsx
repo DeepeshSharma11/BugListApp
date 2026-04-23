@@ -116,50 +116,52 @@ export default function NavBar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
 
-          {/* ── Logo ───────────────────────────────────── */}
-          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-md
-                         transition-transform group-hover:scale-105 select-none"
-              style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
-            >
-              BT
-            </div>
-            <div className="hidden sm:block leading-tight">
-              <span className="block text-[15px] font-semibold" style={{ color: 'var(--text-color)' }}>
-                Bug Tracker
-              </span>
-              <span className="block text-[11px]" style={{ color: 'var(--muted-text)' }}>Workspace</span>
-            </div>
-          </Link>
+          {/* ── Left section: Logo + Theme Toggle ── */}
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-md
+                           transition-transform group-hover:scale-105 select-none"
+                style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
+              >
+                BT
+              </div>
+              <div className="hidden sm:block leading-tight mt-0.5">
+                <span className="block text-[15px] font-semibold" style={{ color: 'var(--text-color)' }}>
+                  Bug Tracker
+                </span>
+                <span className="block text-[11px]" style={{ color: 'var(--muted-text)' }}>Workspace</span>
+              </div>
+            </Link>
 
-          {/* ── Theme toggle pill next to logo (all screen sizes) ── */}
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0"
-            style={{
-              background: 'var(--soft-surface)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--muted-text)',
-            }}
-          >
-            {theme === 'dark' ? (
-              /* sun icon */
-              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5"/>
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-              </svg>
-            ) : (
-              /* moon icon */
-              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            )}
-            <span className="hidden sm:inline">{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
+            {/* Theme toggle pill */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0"
+              style={{
+                background: 'var(--soft-surface)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--muted-text)',
+              }}
+            >
+              {theme === 'dark' ? (
+                /* sun icon */
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+              ) : (
+                /* moon icon */
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+              <span className="hidden sm:inline">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+            </button>
+          </div>
 
           {/* ── Desktop nav ────────────────────────────── */}
           <nav className="hidden md:flex items-center gap-1 flex-1 justify-center px-4">
@@ -185,30 +187,6 @@ export default function NavBar() {
 
           {/* ── Right controls ─────────────────────────── */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title="Toggle theme"
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--soft-surface)]"
-              style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}
-            >
-              {theme === 'dark' ? (
-                /* sun */
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5"/>
-                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
-                           M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                </svg>
-              ) : (
-                /* moon */
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              )}
-            </button>
-
             {/* Auth */}
             {session ? (
               <button
@@ -294,28 +272,7 @@ export default function NavBar() {
           </div>
 
           {/* Mobile footer actions */}
-          <div className="px-4 pb-4 pt-1" style={{ borderTop: '1px solid var(--border-color)' }}>
-            <button
-              onClick={() => { toggleTheme(); }}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium
-                         nav-pill"
-            >
-              {theme === 'dark' ? (
-                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5"/>
-                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
-                           M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                </svg>
-              ) : (
-                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              )}
-              Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
-            </button>
-
+          <div className="px-4 pb-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
             {session ? (
               <button
                 onClick={handleLogout}
