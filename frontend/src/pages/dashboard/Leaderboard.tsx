@@ -116,8 +116,8 @@ function PodiumCard({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      flex: isMobile ? '0 0 auto' : 1,
-      minWidth: 0, width: isMobile ? 'auto' : undefined,
+      flex: 1,
+      minWidth: 0,
     }}>
       {/* Avatar + name above podium */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, marginBottom: 6 }}>
@@ -191,7 +191,7 @@ export default function Leaderboard() {
           setLoading(false)
           return
         }
-        if (mounted) setCurrentUserId(auth.profile?.id ?? null)
+        if (mounted) setCurrentUserId(auth.session?.user?.id ?? null)
 
         const { data: teamData } = await supabase
           .from('teams').select('name').eq('id', teamId).single()
@@ -276,11 +276,10 @@ export default function Leaderboard() {
 
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'row' : 'row',
+            flexDirection: 'row',
             alignItems: 'flex-end',
             justifyContent: 'center',
             gap: isMobile ? 8 : 12,
-            overflowX: isMobile ? 'auto' : 'visible',
             paddingBottom: 0,
           }}>
             {podiumOrdered.map(({ member, slot }) => (

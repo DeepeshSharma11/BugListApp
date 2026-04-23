@@ -48,8 +48,15 @@ export default function NavBar() {
       void loadUnread(session);
 
       if (session?.user) {
+        // Unique channel name per user prevents reuse errors on re-renders
+        const channelName = `navbar-notif-${session.user.id}`;
+        // Remove any stale channel with this name before creating a new one
+        supabase.getChannels()
+          .filter(ch => ch.topic === `realtime:${channelName}`)
+          .forEach(ch => void supabase.removeChannel(ch));
+
         realtimeSub = supabase
-          .channel('navbar-notifications')
+          .channel(channelName)
           .on('postgres_changes', {
             event: '*', schema: 'public', table: 'notifications',
             filter: `recipient_id=eq.${session.user.id}`,
@@ -69,6 +76,7 @@ export default function NavBar() {
       if (realtimeSub) void supabase.removeChannel(realtimeSub);
     };
   }, []);
+
 
   useEffect(() => { void loadUnread(session); }, [location.pathname, session]);
 
