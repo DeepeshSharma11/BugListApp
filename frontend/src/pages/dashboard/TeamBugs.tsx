@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAuthState } from '../../lib/auth'
+import { supabase } from '../../lib/supabaseClient'
 import { BugRowSkeleton } from '../../components/Skeleton'
 
 type Bug = {
@@ -25,6 +26,7 @@ export default function TeamBugs() {
   const [statusFilter, setStatusFilter] = useState('')
   const [severityFilter, setSeverityFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [teamName, setTeamName] = useState<string | null>(null)
 
   // Reset to page 1 whenever any filter changes
   useEffect(() => {
@@ -44,6 +46,16 @@ export default function TeamBugs() {
           if (mounted) setBugs([])
           setLoading(false)
           return
+        }
+
+        // Fetch team name once (only on first load when teamName not yet set)
+        if (mounted && !teamName) {
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('name')
+            .eq('id', teamId)
+            .single()
+          if (mounted && teamData?.name) setTeamName(teamData.name)
         }
 
         const params = new URLSearchParams()
@@ -86,7 +98,19 @@ export default function TeamBugs() {
       <div className="mb-6">
         <h2 className="text-3xl font-extrabold tracking-tight">Team Bugs</h2>
         <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">
-          All bugs for your team.
+          {teamName ? (
+            <>
+              Your team:{' '}
+              <span
+                className="font-semibold px-2 py-0.5 rounded-md"
+                style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+              >
+                {teamName}
+              </span>
+            </>
+          ) : (
+            'All bugs for your team.'
+          )}
         </p>
       </div>
 
