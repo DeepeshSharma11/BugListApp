@@ -10,8 +10,8 @@ from pydantic import BaseModel, EmailStr
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-import aiosmtplib
-from email.message import EmailMessage
+from app.services.email import send_support_email
+from app.services.llm import generate_support_draft
 
 class SupportTicketRequest(BaseModel):
     user_id: Optional[str] = None
@@ -48,9 +48,6 @@ ADMIN_SECRET = os.getenv("ADMIN_SECRET")
 
 logger.info("Initializing Supabase client...")
 sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-SMTP_EMAIL = os.getenv("SMTP_EMAIL", "akshatgupta1452@gmail.com")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
 app = FastAPI(title="Bug Tracker API")
 
@@ -554,39 +551,9 @@ async def reply_support_ticket(request: Request, ticket_id: str, reply_data: Sup
         user_email = ticket["user_email"]
         subject = ticket["subject"]
 
-        # Send email via SMTP
-        msg = EmailMessage()
-        msg["From"] = f"BugTracker Support <{SMTP_EMAIL}>"
-        msg["To"] = user_email
-        msg["Subject"] = f"Re: {subject} (BugTracker Support)"
-        
-        email_body = f"""Hello,
-
-Thank you for reaching out to BugTracker Support.
-
-Regarding your ticket "{subject}":
-{reply_data.reply}
-
-Best regards,
-The BugTracker Team
-"""
-        msg.set_content(email_body)
-
-        try:
-            if not SMTP_PASSWORD:
-                logger.warning("SMTP_PASSWORD is not set. Email will not be sent.")
-            else:
-                await aiosmtplib.send(
-                    msg,
-                    hostname="smtp.gmail.com",
-                    port=587,
-                    start_tls=True,
-                    username=SMTP_EMAIL,
-                    password=SMTP_PASSWORD
-                )
-                logger.info(f"Reply email sent successfully to {user_email}")
-        except Exception as e:
-            logger.error(f"Failed to send email to {user_email}: {e}")
+        # Send email via SMTP Service
+        success = await send_support_email(to_email=user_email, subject=subject, reply_text=reply_data.reply)
+        if not success:
             raise HTTPException(status_code=500, detail="Failed to send email reply")
 
         # Update ticket in database
@@ -605,4 +572,25 @@ The BugTracker Team
         raise
     except Exception as e:
         logger.exception(f"Error processing reply for ticket {ticket_id}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/admin/support/{ticket_id}/draft")
+def generate_draft(request: Request, ticket_id: str):
+    admin_secret = request.headers.get("x-admin-secret")
+    if not admin_secret or admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    try:
+        res = sb.table("support_tickets").select("*").eq("id", ticket_id).execute()
+        if getattr(res, "error", None) or not getattr(res, "data", []):
+            raise HTTPException(status_code=404, detail="Ticket not found")
+            
+        ticket = res.data[0]
+        subject = ticket["subject"]
+        message = ticket["message"]
+
+        draft = generate_support_draft(subject, message)
+        return {"draft": draft}
+    except Exception as e:
+        logger.exception(f"Error generating draft for ticket {ticket_id}")
         raise HTTPException(status_code=500, detail="Internal server error")

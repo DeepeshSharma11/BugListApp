@@ -22,6 +22,7 @@ export default function AdminSupport() {
   const [replyMessage, setReplyMessage] = useState('')
   const [newStatus, setNewStatus] = useState('resolved')
   const [sendingReply, setSendingReply] = useState(false)
+  const [generatingDraft, setGeneratingDraft] = useState(false)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
@@ -50,6 +51,30 @@ export default function AdminSupport() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleGenerateDraft() {
+    if (!selectedTicket) return
+    setGeneratingDraft(true)
+    setError(null)
+    
+    try {
+      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
+      const res = await fetch(`/api/admin/support/${selectedTicket.id}/draft`, {
+        method: 'POST',
+        headers: {
+          'x-admin-secret': adminSecret || ''
+        }
+      })
+
+      if (!res.ok) throw new Error('Failed to generate AI draft')
+      const data = await res.json()
+      setReplyMessage(data.draft)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setGeneratingDraft(false)
     }
   }
 
@@ -179,13 +204,23 @@ export default function AdminSupport() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">Email Reply Message</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold">Email Reply Message</label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDraft}
+                    disabled={generatingDraft}
+                    className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {generatingDraft ? 'Generating...' : '✨ Generate AI Draft'}
+                  </button>
+                </div>
                 <textarea
                   required
                   rows={6}
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
-                  placeholder="Type your reply here. This will be sent directly to the user's email."
+                  placeholder="Type your reply here, or click Generate AI Draft to get a suggestion."
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-blue-500"
                 />
               </div>
