@@ -4,51 +4,63 @@ import { supabase } from '../lib/supabaseClient';
 import { getAuthState } from '../lib/auth';
 import { useTheme } from '../context/ThemeContext';
 
+/* ── Icons (inline SVG helpers) ────────────────────────── */
+const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+const ICONS: Record<string, string> = {
+  Submit:          'M12 5v14M5 12l7-7 7 7',
+  Team:            'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  Notifications:   'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  Profile:         'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  Admin:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  'Support Tickets':'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+};
+
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
+  /* scroll shadow */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   useEffect(() => {
     let realtimeSub: ReturnType<typeof supabase.channel> | null = null;
 
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       void checkAdmin(session);
-      void loadUnreadNotifications(session);
+      void loadUnread(session);
 
-      // Subscribe to realtime notifications changes for this user
       if (session?.user) {
         realtimeSub = supabase
           .channel('navbar-notifications')
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'notifications',
-              filter: `recipient_id=eq.${session.user.id}`,
-            },
-            () => {
-              void loadUnreadNotifications(session);
-            }
-          )
+          .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'notifications',
+            filter: `recipient_id=eq.${session.user.id}`,
+          }, () => void loadUnread(session))
           .subscribe();
       }
     });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      void checkAdmin(session);
-      void loadUnreadNotifications(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      void checkAdmin(s);
+      void loadUnread(s);
     });
 
     return () => {
@@ -57,30 +69,21 @@ export default function NavBar() {
     };
   }, []);
 
-  useEffect(() => {
-    void loadUnreadNotifications(session);
-  }, [location.pathname, session]);
+  useEffect(() => { void loadUnread(session); }, [location.pathname, session]);
 
-  const checkAdmin = async (currentSession: any) => {
-    const authState = await getAuthState(currentSession ?? null);
-    setIsAdmin(authState.isAdmin);
+  const checkAdmin = async (s: any) => {
+    const auth = await getAuthState(s ?? null);
+    setIsAdmin(auth.isAdmin);
   };
 
-  const loadUnreadNotifications = async (currentSession: any) => {
-    if (!currentSession?.user) {
-      setUnreadCount(0);
-      return;
-    }
-
+  const loadUnread = async (s: any) => {
+    if (!s?.user) { setUnreadCount(0); return; }
     const { count, error } = await supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', currentSession.user.id)
+      .eq('recipient_id', s.user.id)
       .eq('is_read', false);
-
-    if (!error) {
-      setUnreadCount(count ?? 0);
-    }
+    if (!error) setUnreadCount(count ?? 0);
   };
 
   const handleLogout = async () => {
@@ -89,164 +92,226 @@ export default function NavBar() {
     setIsOpen(false);
   };
 
-  
-
-  const baseNavLinks = [
-    { name: 'Submit', path: '/dashboard/submit' },
-    { name: 'Team', path: '/dashboard/team' },
+  const baseLinks = [
+    { name: 'Submit',        path: '/dashboard/submit' },
+    { name: 'Team',          path: '/dashboard/team' },
     { name: 'Notifications', path: '/dashboard/notifications' },
-    { name: 'Profile', path: '/dashboard/profile' },
+    { name: 'Profile',       path: '/dashboard/profile' },
   ];
+  const navLinks = isAdmin
+    ? [...baseLinks, { name: 'Admin', path: '/admin' }, { name: 'Support Tickets', path: '/admin/support' }]
+    : baseLinks;
 
-  const navLinks = isAdmin 
-    ? [...baseNavLinks, { name: 'Admin', path: '/admin' }, { name: 'Support Tickets', path: '/admin/support' }]
-    : baseNavLinks;
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border-color)] bg-[var(--surface-color)]/90 shadow-sm backdrop-blur">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'shadow-[0_2px_16px_rgba(0,0,0,0.08)] backdrop-blur-md'
+          : 'backdrop-blur-sm'
+      }`}
+      style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border-color)' }}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 items-center justify-between gap-3 py-2">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                BT
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold leading-tight text-[var(--text-color)]">Bug Tracker</h1>
-                <p className="text-xs font-medium text-[var(--muted-text)]">Workspace</p>
-              </div>
-            </Link>
-          </div>
+        <div className="flex h-16 items-center justify-between">
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center">
-            <nav className="flex gap-1 lg:gap-2 mr-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname.startsWith(link.path)
-                      ? 'bg-blue-50 text-blue-700 shadow-sm'
-                      : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <span>{link.name}</span>
-                    {link.path === '/dashboard/notifications' && unreadCount > 0 && (
-                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              ))}
-            </nav>
-            
-            
+          {/* ── Logo ───────────────────────────────────── */}
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-md
+                         transition-transform group-hover:scale-105 select-none"
+              style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
+            >
+              BT
+            </div>
+            <div className="hidden sm:block leading-tight">
+              <span className="block text-[15px] font-semibold" style={{ color: 'var(--text-color)' }}>
+                Bug Tracker
+              </span>
+              <span className="block text-[11px]" style={{ color: 'var(--muted-text)' }}>Workspace</span>
+            </div>
+          </Link>
 
-            <div className="mr-3">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="inline-flex items-center rounded-md border border-[var(--border-color)] bg-[var(--soft-surface)] px-3 py-2 text-sm font-medium text-[var(--text-color)] transition hover:opacity-90"
+          {/* ── Desktop nav ────────────────────────────── */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center px-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
+                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium
+                            transition-all duration-150 whitespace-nowrap
+                            ${isActive(link.path) ? 'nav-pill-active' : 'nav-pill'}`}
               >
-                {theme === 'dark' ? 'Light' : 'Dark'}
-              </button>
-            </div>
+                {ICONS[link.name] && <Icon d={ICONS[link.name]} size={15} />}
+                {link.name}
+                {link.path === '/dashboard/notifications' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500
+                                   text-[10px] font-bold text-white flex items-center justify-center shadow">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </nav>
 
-            {/* Auth Actions */}
-            <div className="flex items-center pl-4 border-l border-[var(--border-color)]">
-              {session ? (
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-medium text-[var(--muted-text)] transition-colors hover:text-[var(--text-color)]"
-                >
-                  Log out
-                </button>
+          {/* ── Right controls ─────────────────────────── */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title="Toggle theme"
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--soft-surface)]"
+              style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}
+            >
+              {theme === 'dark' ? (
+                /* sun */
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
+                           M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
               ) : (
-                <Link
-                  to="/login"
-                  className="text-sm font-medium text-[var(--muted-text)] transition-colors hover:text-[var(--text-color)]"
-                >
-                  Log in
-                </Link>
+                /* moon */
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
               )}
-            </div>
+            </button>
+
+            {/* Auth */}
+            {session ? (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                           hover:bg-[var(--soft-surface)]"
+                style={{ color: 'var(--muted-text)' }}
+              >
+                Log out
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
+              >
+                Log in
+              </Link>
+            )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="flex md:hidden items-center">
+          {/* ── Mobile hamburger ───────────────────────── */}
+          <div className="flex md:hidden items-center gap-2">
+            {/* Badge for mobile notifications */}
+            {unreadCount > 0 && (
+              <Link to="/dashboard/notifications"
+                className="relative w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}>
+                <Icon d={ICONS['Notifications']} size={17} />
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500
+                                 text-[10px] font-bold text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </Link>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="rounded-md p-2 text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)] focus:outline-none"
               aria-label="Toggle menu"
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors
+                         hover:bg-[var(--soft-surface)]"
+              style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {isOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                {isOpen
+                  ? <><path d="M18 6 6 18"/><path d="M6 6l12 12"/></>
+                  : <><path d="M3 12h18"/><path d="M3 6h18"/><path d="M3 18h18"/></>
+                }
               </svg>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Nav */}
+      {/* ── Mobile drawer ──────────────────────────────── */}
       {isOpen && (
-        <div className="md:hidden border-t border-[var(--border-color)] bg-[var(--surface-color)]">
-          <div className="px-4 pt-2 pb-4 space-y-1 shadow-inner">
+        <div
+          className="md:hidden fade-in"
+          style={{
+            background: 'var(--surface-color)',
+            borderTop: '1px solid var(--border-color)',
+          }}
+        >
+          <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 rounded-md text-base font-medium transition-colors ${
-                  location.pathname.startsWith(link.path)
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-[var(--muted-text)] hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]'
-                }`}
+                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium
+                            transition-all duration-150
+                            ${isActive(link.path) ? 'nav-pill-active' : 'nav-pill'}`}
               >
-                <span className="inline-flex items-center gap-2">
-                  <span>{link.name}</span>
-                  {link.path === '/dashboard/notifications' && unreadCount > 0 && (
-                    <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-semibold text-white">
-                      {unreadCount}
-                    </span>
-                  )}
-                </span>
+                {ICONS[link.name] && <Icon d={ICONS[link.name]} size={17} />}
+                <span className="flex-1">{link.name}</span>
+                {link.path === '/dashboard/notifications' && unreadCount > 0 && (
+                  <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             ))}
-            
-            
+          </div>
 
-            <div className="mt-2 border-t border-[var(--border-color)] pt-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
-              >
-                Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
-              </button>
-              {session ? (
-                <button
-                  onClick={handleLogout}
-                  className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
-                >
-                  Log out
-                </button>
+          {/* Mobile footer actions */}
+          <div className="px-4 pb-4 pt-1" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => { toggleTheme(); }}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium
+                         nav-pill"
+            >
+              {theme === 'dark' ? (
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
+                           M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
               ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setIsOpen(false)}
-                  className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[var(--muted-text)] transition-colors hover:bg-[var(--soft-surface)] hover:text-[var(--text-color)]"
-                >
-                  Log in
-                </Link>
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
               )}
-            </div>
+              Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
+            </button>
+
+            {session ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium
+                           text-rose-500 hover:bg-rose-50 transition-colors"
+              >
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4
+                           M16 17l5-5-5-5M21 12H9"/>
+                </svg>
+                Log out
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl
+                           text-sm font-semibold text-white mt-1 transition-opacity hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
+              >
+                Log in
+              </Link>
+            )}
           </div>
         </div>
       )}

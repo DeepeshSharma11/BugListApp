@@ -3,13 +3,41 @@ import { Link } from 'react-router-dom'
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-[var(--border-color)] bg-[var(--surface-color)] py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-between gap-4 md:flex-row">
-        <p className="text-center text-sm text-[var(--muted-text)] md:text-left">&copy; {new Date().getFullYear()} Bug Tracker. All rights reserved.</p>
-        <div className="flex flex-wrap justify-center gap-4 text-sm text-[var(--muted-text)] sm:gap-6">
-          <Link to="/dashboard/privacy" className="transition-colors hover:text-[var(--text-color)]">Privacy Policy</Link>
-          <Link to="/dashboard/terms" className="transition-colors hover:text-[var(--text-color)]">Terms of Service</Link>
-          <Link to="/dashboard/support" className="transition-colors hover:text-[var(--text-color)]">Support</Link>
+    <footer
+      className="mt-auto py-6"
+      style={{ borderTop: '1px solid var(--border-color)', background: 'var(--surface-color)' }}
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold"
+              style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
+            >
+              BT
+            </div>
+            <span className="text-sm font-medium" style={{ color: 'var(--muted-text)' }}>
+              © {new Date().getFullYear()} Bug Tracker
+            </span>
+          </div>
+
+          {/* Links */}
+          <nav className="flex flex-wrap justify-center gap-5 text-sm" style={{ color: 'var(--muted-text)' }}>
+            {[
+              { label: 'Privacy', to: '/dashboard/privacy' },
+              { label: 'Terms',   to: '/dashboard/terms' },
+              { label: 'Support', to: '/dashboard/support' },
+            ].map(({ label, to }) => (
+              <Link
+                key={label}
+                to={to}
+                className="transition-colors hover:text-[var(--accent)]"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

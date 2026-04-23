@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { getAuthState } from '../../lib/auth'
 import { useParams } from 'react-router-dom'
+import { BugDetailSkeleton } from '../../components/Skeleton'
 
 type Bug = {
   id: string
@@ -48,8 +49,12 @@ export default function BugDetail() {
     })()
   }, [bug])
 
-  if (loading) return <div>Loading...</div>
-  if (!bug) return <div>Bug not found.</div>
+  if (loading) return <BugDetailSkeleton />
+  if (!bug) return (
+    <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] p-12 text-center text-sm font-medium text-[var(--muted-text)]">
+      Bug not found.
+    </div>
+  )
 
   return (
     <div className="max-w-5xl mx-auto">

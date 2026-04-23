@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAuthState } from '../../lib/auth'
+import { BugRowSkeleton } from '../../components/Skeleton'
 
 type Bug = {
   id: string
@@ -139,11 +140,15 @@ export default function TeamBugs() {
           </div>
         )}
 
-        {loading && <div>Loading...</div>}
-        {error && <div className="text-red-600">{error}</div>}
-        {!loading && !error && bugs.length === 0 && <div className="text-gray-500">No bugs found for your team.</div>}
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 mt-4">{error}</div>}
+        {!loading && !error && bugs.length === 0 && (
+          <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] p-8 text-center text-sm font-medium text-[var(--muted-text)] mt-4">
+            No bugs found for your team.
+          </div>
+        )}
 
         <div className="mt-6 space-y-4">
+          {loading && Array.from({ length: 5 }).map((_, i) => <BugRowSkeleton key={i} />)}
           {bugs.map((b) => (
             <Link key={b.id} to={`/dashboard/bugs/${b.id}`} className="card block hover:opacity-80 transition-opacity group">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

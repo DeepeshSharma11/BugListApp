@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { getAuthState } from '../../lib/auth'
+import { ProfileFieldSkeleton } from '../../components/Skeleton'
 
 export default function Profile() {
   const [loading, setLoading] = useState(true)
@@ -95,29 +96,33 @@ export default function Profile() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Full Name</p>
-              <p className="mt-1.5 text-base font-semibold">{fullName}</p>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Email</p>
-              <p className="mt-1.5 break-all text-base font-semibold">{email}</p>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Role</p>
-              <p className="mt-1.5 text-base font-semibold capitalize">
-                {role.replace('_', ' ')}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Team ID</p>
-              <p className="mt-1.5 break-all text-base font-semibold text-[var(--muted-text)]">
-                {teamId ?? 'Not assigned'}
-              </p>
-            </div>
+            {loading ? (
+              <>
+                <ProfileFieldSkeleton />
+                <ProfileFieldSkeleton />
+                <ProfileFieldSkeleton />
+                <ProfileFieldSkeleton />
+              </>
+            ) : (
+              <>
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Full Name</p>
+                  <p className="mt-1.5 text-base font-semibold">{fullName}</p>
+                </div>
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Email</p>
+                  <p className="mt-1.5 break-all text-base font-semibold">{email}</p>
+                </div>
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Role</p>
+                  <p className="mt-1.5 text-base font-semibold capitalize">{role.replace('_', ' ')}</p>
+                </div>
+                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Team ID</p>
+                  <p className="mt-1.5 break-all text-base font-semibold text-[var(--muted-text)]">{teamId ?? 'Not assigned'}</p>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -157,17 +162,6 @@ export default function Profile() {
         </section>
       </div>
 
-      {loading && (
-        <div className="card text-sm font-medium animate-pulse text-center p-6">
-          Loading profile...
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-900/50 p-4 text-sm font-medium text-orange-700 dark:text-orange-400">
-          Profile data partially loaded. Reason: {error}
-        </div>
-      )}
     </div>
   )
 }

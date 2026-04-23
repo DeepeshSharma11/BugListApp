@@ -587,7 +587,7 @@ export default function AdminDashboard() {
             <h3 className="mt-1 text-xl font-bold">All Users</h3>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
             {users.length === 0 && !loading ? (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
                 Koi user data visible nahi hai.

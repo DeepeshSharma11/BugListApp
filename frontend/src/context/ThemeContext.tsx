@@ -26,13 +26,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem('bug-task-theme', theme)
   }, [theme])
 
-  const value = useMemo(
-    () => ({
-      theme,
-      toggleTheme: () => setTheme((current) => (current === 'light' ? 'dark' : 'light')),
-    }),
-    [theme]
-  )
+  const toggleTheme = () => {
+    // Disable all transitions for exactly one frame so the switch is instant
+    const root = document.documentElement
+    root.classList.add('no-transitions')
+    setTheme((current) => (current === 'light' ? 'dark' : 'light'))
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.remove('no-transitions')
+      })
+    })
+  }
+
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme])
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

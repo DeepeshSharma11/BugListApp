@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone'
 import { supabase } from '../../lib/supabaseClient'
 import { getAuthState } from '../../lib/auth'
 import { useDebounce } from '../../utils/debounce'
+import { SubmitBugsSkeleton, Sk } from '../../components/Skeleton'
 
 function Field({
   children,
@@ -274,8 +275,10 @@ export default function SubmitPage() {
       </div>
 
       {!profileReady && (
-        <div className="mb-6 rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-4 text-sm font-medium animate-pulse">
-          Loading your profile details...
+        <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Sk className="h-10 col-span-2" />
+          <Sk className="h-10" />
+          <Sk className="h-10" />
         </div>
       )}
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { getAuthState } from '../../lib/auth'
+import { NotificationSkeleton } from '../../components/Skeleton'
 
 interface NotificationRow {
   id: string
@@ -144,8 +145,8 @@ export default function Notifications() {
       </div>
 
       {loading && (
-        <div className="card text-sm font-medium animate-pulse text-center p-6">
-          Loading notifications...
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <NotificationSkeleton key={i} />)}
         </div>
       )}
 
