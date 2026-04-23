@@ -57,6 +57,7 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 PORT=8000
 ADMIN_SECRET=Scret value
+GROQ_API_KEY=your groq key
 
 # Email configuration for Admin Support Ticket replies
 SMTP_EMAIL=your_email@gmail.com

@@ -270,7 +270,7 @@ export default function SubmitPage() {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-4xl mx-auto">
+    <form onSubmit={submit} className="w-full max-w-7xl mx-auto">
       <div className="mb-8 border-b border-[var(--border-color)] pb-6">
         <h2 className="text-3xl font-extrabold tracking-tight">Submit a Bug</h2>
         <p className="mt-2 text-sm text-[var(--muted-text)] font-medium">Found an issue? Let the team know.</p>
@@ -290,100 +290,109 @@ export default function SubmitPage() {
         </div>
       )}
 
-      <div className="card mb-10">
+      <div className="card mb-10 p-6 sm:p-8 lg:p-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-2">
+          
+          {/* Left Column */}
+          <div>
+            <Field label="Title">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                required
+              />
+              {duplicate && (
+                <div className="mt-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 p-3 text-sm font-medium text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50">
+                  Possible duplicate:{' '}
+                  <a className="underline font-bold hover:text-orange-800 dark:hover:text-orange-300" href={`/dashboard/bugs/${duplicate.id}`}>
+                    {duplicate.title}
+                  </a>
+                </div>
+              )}
+            </Field>
 
-      <Field label="Title">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-          required
-        />
-        {duplicate && (
-          <div className="mt-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 p-3 text-sm font-medium text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50">
-            Possible duplicate:{' '}
-            <a className="underline font-bold hover:text-orange-800 dark:hover:text-orange-300" href={`/dashboard/bugs/${duplicate.id}`}>
-              {duplicate.title}
-            </a>
+            <Field label="Description" helperText="At least 20 characters.">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={10}
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-y"
+                required
+              />
+            </Field>
           </div>
-        )}
-      </Field>
 
-      <Field label="Description" helperText="At least 20 characters.">
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={6}
-          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-y"
-          required
-        />
-      </Field>
+          {/* Right Column */}
+          <div>
+            <Field label="Environment">
+              <input
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value)}
+                className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                placeholder="production, staging, Android 14, Chrome..."
+              />
+            </Field>
 
-      <Field label="Environment">
-        <input
-          value={environment}
-          onChange={(e) => setEnvironment(e.target.value)}
-          className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-          placeholder="production, staging, Android 14, Chrome..."
-        />
-      </Field>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+              <Field label="Category">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                >
+                  <option value="">Select category (optional)</option>
+                  <option value="dashboard-bug">Dashboard bug</option>
+                  <option value="navbar-bug">NavBar bug</option>
+                  <option value="footer-bug">Footer bug</option>
+                  <option value="ui-bug">UI bug</option>
+                  <option value="performance">Performance</option>
+                  <option value="__custom__">Custom...</option>
+                </select>
+              </Field>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Field label="Category">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-          >
-            <option value="">Select category (optional)</option>
-            <option value="dashboard-bug">Dashboard bug</option>
-            <option value="navbar-bug">NavBar bug</option>
-            <option value="footer-bug">Footer bug</option>
-            <option value="ui-bug">UI bug</option>
-            <option value="performance">Performance</option>
-            <option value="__custom__">Custom...</option>
-          </select>
-        </Field>
-
-        {(category === '__custom__' || customCategory) && (
-          <Field label="Custom category" helperText="Optional — will be saved as a tag">
-            <input
-              value={customCategory}
-              onChange={(e) => setCustomCategory(e.target.value)}
-              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-              placeholder="Enter custom category"
-            />
-          </Field>
-        )}
-      </div>
-
-      <Field
-        label="Screenshots"
-        helperText={teamId ? `Bug will be created for team ${teamId}.` : 'No team assigned yet.'}
-      >
-        <div
-          {...getRootProps()}
-          className="cursor-pointer rounded-2xl border-2 border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] hover:bg-[var(--card-color)] transition-colors p-8 text-center"
-        >
-          <input {...getInputProps()} />
-          <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-          </div>
-          <p className="font-medium">Drag & drop images here</p>
-          <p className="text-sm text-[var(--muted-text)] mt-1">or click to browse files (max 5)</p>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {files.map((file, index) => (
-            <div
-              key={`${file.name}-${index}`}
-              className="flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] px-2 text-center text-xs font-medium shadow-sm break-all"
-            >
-              {file.name}
+              {(category === '__custom__' || customCategory) && (
+                <Field label="Custom category" helperText="Optional — will be saved as a tag">
+                  <input
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+                    placeholder="Enter custom category"
+                  />
+                </Field>
+              )}
             </div>
-          ))}
+
+            <Field
+              label="Screenshots"
+              helperText={teamId ? `Bug will be created for team ${teamId}.` : 'No team assigned yet.'}
+            >
+              <div
+                {...getRootProps()}
+                className="cursor-pointer rounded-2xl border-2 border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] hover:bg-[var(--card-color)] transition-colors p-8 text-center"
+              >
+                <input {...getInputProps()} />
+                <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                </div>
+                <p className="font-medium">Drag & drop images here</p>
+                <p className="text-sm text-[var(--muted-text)] mt-1">or click to browse files (max 5)</p>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {files.map((file, index) => (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex h-24 items-center justify-center overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] px-2 text-center text-xs font-medium shadow-sm break-all"
+                  >
+                    {file.name}
+                  </div>
+                ))}
+              </div>
+            </Field>
+          </div>
+
         </div>
-      </Field>
 
       <div className="mt-8 flex justify-end">
         <button
