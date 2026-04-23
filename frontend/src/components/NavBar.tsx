@@ -119,13 +119,11 @@ export default function NavBar() {
           {/* ── Left section: Logo ── */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2.5 group shrink-0">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shadow-md
-                           transition-transform group-hover:scale-105 select-none"
-                style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
-              >
-                BT
-              </div>
+            <img 
+              src="/ladybug.png" 
+              alt="Bug Tracker" 
+              className="w-9 h-9 object-contain drop-shadow-md transition-transform group-hover:scale-105 select-none"
+            />
               <div className="hidden sm:block leading-tight mt-0.5">
                 <span className="block text-[15px] font-semibold" style={{ color: 'var(--text-color)' }}>
                   Bug Tracker

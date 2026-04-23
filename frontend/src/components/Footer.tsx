@@ -11,12 +11,11 @@ export default function Footer() {
         <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
           {/* Brand */}
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold"
-              style={{ background: 'linear-gradient(135deg,#7c6ff7 0%,#5b8def 100%)' }}
-            >
-              BT
-            </div>
+            <img 
+              src="/ladybug.png" 
+              alt="Bug Tracker" 
+              className="w-6 h-6 object-contain"
+            />
             <span className="text-sm font-medium" style={{ color: 'var(--muted-text)' }}>
               © {new Date().getFullYear()} Bug Tracker
             </span>
