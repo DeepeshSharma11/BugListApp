@@ -21,7 +21,7 @@ def generate_support_draft(subject: str, message: str) -> str:
 
     try:
         completion = groq_client.chat.completions.create(
-            model="llama3-8b-8192", # Using a fast standard Llama model
+            model=    "llama-3.3-70b-versatile", # Using a fast standard Llama model
             messages=[
                 {
                     "role": "system",
