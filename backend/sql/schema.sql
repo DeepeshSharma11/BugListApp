@@ -8,6 +8,8 @@
 -- 5. sql/05_backfill_profiles.sql
 -- 6. sql/06_rls_and_policies.sql
 -- 7. sql/07_storage.sql
+-- 8. sql/08_leaderboard.sql
+-- 9. sql/09_realtime.sql
 --
 -- Reason:
 -- - easier debugging
