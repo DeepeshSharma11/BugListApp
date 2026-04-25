@@ -25,6 +25,9 @@ jobs:
 
             cd ~/BugListApp
 
+            # Update git remote to use the GitHub Actions token for authentication
+            git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
             # Pull latest code
             git fetch origin
             git reset --hard origin/main || git reset --hard origin/master
