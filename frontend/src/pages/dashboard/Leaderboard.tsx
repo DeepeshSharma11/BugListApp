@@ -193,9 +193,18 @@ export default function Leaderboard() {
         }
         if (mounted) setCurrentUserId(auth.session?.user?.id ?? null)
 
-        const { data: teamData } = await supabase
-          .from('teams').select('name').eq('id', teamId).single()
-        if (mounted && teamData?.name) setTeamName(teamData.name)
+        try {
+          const token = auth.session?.access_token ?? ''
+          const teamRes = await fetch(`/api/teams/${teamId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (teamRes.ok) {
+            const teamData = await teamRes.json()
+            if (mounted && teamData?.name) setTeamName(teamData.name)
+          }
+        } catch (e) {
+          console.error("Error fetching team name", e)
+        }
 
         const res = await fetch(`/api/leaderboard?team_id=${teamId}`)
         if (!res.ok) {

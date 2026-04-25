@@ -33,14 +33,16 @@ export async function getAuthState(currentSession?: Session | null): Promise<Aut
     }
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('full_name, email, role, team_id')
-    .eq('id', session.user.id)
-    .maybeSingle<AuthProfile>()
-
-  if (error) {
-    console.warn('Failed to read profile role from Supabase:', error.message)
+  let data: AuthProfile | null = null
+  try {
+    const res = await fetch('/api/profiles/me', {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    })
+    if (res.ok) {
+      data = await res.json()
+    }
+  } catch (err) {
+    console.warn('Failed to read profile role via backend:', err)
   }
 
   const role =

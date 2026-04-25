@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
+import { getAuthState } from '../../lib/auth'
 
 
 interface BugRow {
@@ -143,55 +144,35 @@ export default function AdminDashboard() {
     setLoading(true)
     setError(null)
 
-    // Fetch stats via count-only queries (accurate beyond Supabase's 1000-row default)
-    const [
-      { count: totalBugs, error: e1 },
-      { count: openBugs, error: e2 },
-      { count: resolvedBugs, error: e3 },
-      { count: criticalBugs, error: e4 },
-      { count: highPriorityBugs, error: e5 },
-      { data: recentBugsData, error: e6 },
-      { data: teamsData, error: teamsError },
-      { data: usersData, error: usersError },
-    ] = await Promise.all([
-      supabase.from('bugs').select('id', { count: 'exact', head: true }),
-      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('status', 'resolved'),
-      supabase.from('bugs').select('id', { count: 'exact', head: true }).eq('severity', 'critical'),
-      supabase.from('bugs').select('id', { count: 'exact', head: true }).in('priority', ['high', 'urgent']),
-      supabase
-        .from('bugs')
-        .select('id, title, status, severity, priority, team_id, created_at')
-        .order('created_at', { ascending: false })
-        .limit(8),
-      supabase.from('teams').select('id, name, slug, created_at').order('created_at', { ascending: false }),
-      supabase
-        .from('profiles')
-        .select('id, full_name, email, role, team_id')
-        .order('created_at', { ascending: false }),
-    ])
 
-    const anyError = e1 || e2 || e3 || e4 || e5 || e6 || teamsError || usersError
-    if (anyError) {
-      setError(anyError.message || 'Failed to load admin dashboard.')
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
+
+      const res = await fetch('/api/admin/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to load admin dashboard.')
+      }
+
+      const data = await res.json()
+
+      setStats(data.stats)
+      setRecentBugs(data.recentBugs)
+      setTeams(data.teams)
+      setUsers(data.users)
+      setSelectedTeamId((current) => current || data.teams?.[0]?.id || '')
+
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setStats({
-      totalBugs: totalBugs ?? 0,
-      openBugs: openBugs ?? 0,
-      resolvedBugs: resolvedBugs ?? 0,
-      criticalBugs: criticalBugs ?? 0,
-      highPriorityBugs: highPriorityBugs ?? 0,
-      teamCount: teamsData?.length ?? 0,
-    })
-
-    setRecentBugs(recentBugsData ?? [])
-    setTeams(teamsData ?? [])
-    setUsers(usersData ?? [])
-    setSelectedTeamId((current) => current || teamsData?.[0]?.id || '')
-    setLoading(false)
   }
 
   async function handleCreateTeam(e: React.FormEvent) {
@@ -209,25 +190,37 @@ export default function AdminDashboard() {
 
     setSavingTeam(true)
 
-    const { data, error: insertError } = await supabase
-      .from('teams')
-      .insert({ name: normalizedName, slug: normalizedSlug })
-      .select('id, name, slug, created_at')
-      .single()
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
 
-    if (insertError) {
-      setError(insertError.message)
+      const res = await fetch('/api/admin/teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: normalizedName, slug: normalizedSlug })
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to create team.')
+      }
+
+      const data = await res.json()
+
+      setSuccess(`Team "${data.name}" create ho gayi.`)
+      setTeamName('')
+      setTeamSlug('')
+      setTeams((current) => [data, ...current])
+      setSelectedTeamId(data.id)
+      setStats((current) => ({ ...current, teamCount: current.teamCount + 1 }))
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
       setSavingTeam(false)
-      return
     }
-
-    setSuccess(`Team "${data.name}" create ho gayi.`)
-    setTeamName('')
-    setTeamSlug('')
-    setTeams((current) => [data, ...current])
-    setSelectedTeamId(data.id)
-    setStats((current) => ({ ...current, teamCount: current.teamCount + 1 }))
-    setSavingTeam(false)
   }
 
   async function handleAssignUsers() {
@@ -246,31 +239,42 @@ export default function AdminDashboard() {
 
     setAssigningUsers(true)
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ team_id: selectedTeamId })
-      .in('id', selectedUserIds)
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
 
-    if (updateError) {
-      setError(updateError.message)
-      setAssigningUsers(false)
-      return
-    }
+      const res = await fetch('/api/admin/profiles/assign-team', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ team_id: selectedTeamId, user_ids: selectedUserIds })
+      })
 
-    setUsers((current) =>
-      current.map((user) =>
-        selectedUserIds.includes(user.id) ? { ...user, team_id: selectedTeamId } : user
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to assign users.')
+      }
+
+      setUsers((current) =>
+        current.map((user) =>
+          selectedUserIds.includes(user.id) ? { ...user, team_id: selectedTeamId } : user
+        )
       )
-    )
 
-    const assignedTeam = teams.find((team) => team.id === selectedTeamId)
-    setSuccess(
-      `${selectedUserIds.length} user(s) ko ${assignedTeam?.name ?? 'selected team'} me assign kar diya gaya.`
-    )
-    setSelectedUserIds([])
-    setSearchTerm('')
-    setIsModalOpen(false)
-    setAssigningUsers(false)
+      const assignedTeam = teams.find((team) => team.id === selectedTeamId)
+      setSuccess(
+        `${selectedUserIds.length} user(s) ko ${assignedTeam?.name ?? 'selected team'} me assign kar diya gaya.`
+      )
+      setSelectedUserIds([])
+      setSearchTerm('')
+      setIsModalOpen(false)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setAssigningUsers(false)
+    }
   }
 
   function toggleUserSelection(userId: string) {
@@ -629,99 +633,98 @@ export default function AdminDashboard() {
 
       {isModalOpen &&
         createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
-          <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Select Users By Email</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Search by email/name and assign selected users to chosen team.
-                </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4">
+            <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Select Users By Email</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Search by email/name and assign selected users to chosen team.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setSearchTerm('')
+                    setSelectedUserIds([])
+                  }}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalOpen(false)
-                  setSearchTerm('')
-                  setSelectedUserIds([])
-                }}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
-              >
-                Close
-              </button>
-            </div>
 
-            <div className="space-y-4 px-6 py-5">
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-                placeholder="Search by email, name, or role"
-              />
+              <div className="space-y-4 px-6 py-5">
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+                  placeholder="Search by email, name, or role"
+                />
 
-              <div className="max-h-[45vh] space-y-3 overflow-y-auto pr-1">
-                {filteredUsers.map((user) => {
-                  const checked = selectedUserIds.includes(user.id)
-                  const assignedTeam = teams.find((team) => team.id === user.team_id)
+                <div className="max-h-[45vh] space-y-3 overflow-y-auto pr-1">
+                  {filteredUsers.map((user) => {
+                    const checked = selectedUserIds.includes(user.id)
+                    const assignedTeam = teams.find((team) => team.id === user.team_id)
 
-                  return (
-                    <label
-                      key={user.id}
-                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
-                        checked
-                          ? 'border-slate-900 bg-slate-50'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleUserSelection(user.id)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-900">
-                          {user.full_name || 'Unnamed User'}
-                        </p>
-                        <p className="mt-1 break-all text-xs text-slate-500">
-                          {user.email || 'No email'}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700">
-                            {user.role || 'member'}
-                          </span>
-                          <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-700">
-                            {assignedTeam ? assignedTeam.name : 'No team assigned'}
-                          </span>
+                    return (
+                      <label
+                        key={user.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${checked
+                            ? 'border-slate-900 bg-slate-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleUserSelection(user.id)}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-slate-900">
+                            {user.full_name || 'Unnamed User'}
+                          </p>
+                          <p className="mt-1 break-all text-xs text-slate-500">
+                            {user.email || 'No email'}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700">
+                              {user.role || 'member'}
+                            </span>
+                            <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-700">
+                              {assignedTeam ? assignedTeam.name : 'No team assigned'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </label>
-                  )
-                })}
+                      </label>
+                    )
+                  })}
 
-                {filteredUsers.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-                    Koi matching user nahi mila.
-                  </div>
-                )}
+                  {filteredUsers.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+                      Koi matching user nahi mila.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-500">{selectedUserIds.length} user(s) selected</p>
+                <button
+                  type="button"
+                  onClick={() => void handleAssignUsers()}
+                  disabled={assigningUsers || selectedUserIds.length === 0 || !selectedTeamId}
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {assigningUsers ? 'Assigning...' : 'Assign Selected Users'}
+                </button>
               </div>
             </div>
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">{selectedUserIds.length} user(s) selected</p>
-              <button
-                type="button"
-                onClick={() => void handleAssignUsers()}
-                disabled={assigningUsers || selectedUserIds.length === 0 || !selectedTeamId}
-                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {assigningUsers ? 'Assigning...' : 'Assign Selected Users'}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

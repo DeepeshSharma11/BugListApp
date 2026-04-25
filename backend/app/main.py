@@ -385,10 +385,8 @@ def update_screenshots(request: Request, bug_id: str, urls: List[str]):
     return {"id": bug_id, "screenshot_urls": urls}
 
 
-def _require_admin(request: Request) -> str:
-    """Verify caller is an authenticated admin via Supabase JWT.
-    Returns the user_id if authorized.
-    """
+def _require_auth(request: Request) -> str:
+    """Verify caller is authenticated via Supabase JWT. Returns user_id."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
@@ -396,17 +394,24 @@ def _require_admin(request: Request) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Empty token")
     try:
-        # Verify JWT and get user via Supabase Auth
         user_resp = sb.auth.get_user(token)
         user = getattr(user_resp, "user", None)
         if not user or not user.id:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
-        user_id = user.id
+        return user.id
     except HTTPException:
         raise
     except Exception:
         logger.exception("Token verification failed")
         raise HTTPException(status_code=401, detail="Token verification failed")
+
+
+def _require_admin(request: Request) -> str:
+    """Verify caller is an authenticated admin via Supabase JWT.
+    Returns the user_id if authorized.
+    """
+    user_id = _require_auth(request)
+
     # Check profile role
     try:
         profile_res = sb.table("profiles").select("role").eq("id", user_id).single().execute()
@@ -478,6 +483,115 @@ def admin_list_notifications(request: Request, recipient_id: Optional[str] = Non
         raise HTTPException(status_code=500, detail="DB error")
     return getattr(res, "data", [])
 
+# --- Admin Dashboard API ---
+
+@app.get("/api/admin/dashboard")
+@limiter.limit("30/minute")
+def get_admin_dashboard(request: Request):
+    _require_admin(request)
+    try:
+        # We can execute these queries sequentially or use a stored procedure.
+        # For simplicity, we'll execute them sequentially here as the backend is fast.
+        bugs_total = sb.table("bugs").select("id", count="exact", head=True).execute()
+        bugs_open = sb.table("bugs").select("id", count="exact", head=True).eq("status", "open").execute()
+        bugs_resolved = sb.table("bugs").select("id", count="exact", head=True).eq("status", "resolved").execute()
+        bugs_critical = sb.table("bugs").select("id", count="exact", head=True).eq("severity", "critical").execute()
+        bugs_high_priority = sb.table("bugs").select("id", count="exact", head=True).in_("priority", ["high", "urgent"]).execute()
+        
+        recent_bugs = sb.table("bugs").select("id, title, status, severity, priority, team_id, created_at").order("created_at", desc=True).limit(8).execute()
+        teams = sb.table("teams").select("id, name, slug, created_at").order("created_at", desc=True).execute()
+        profiles = sb.table("profiles").select("id, full_name, email, role, team_id").order("created_at", desc=True).execute()
+
+        def get_count(res):
+            return getattr(res, "count", 0) or 0
+
+        return {
+            "stats": {
+                "totalBugs": get_count(bugs_total),
+                "openBugs": get_count(bugs_open),
+                "resolvedBugs": get_count(bugs_resolved),
+                "criticalBugs": get_count(bugs_critical),
+                "highPriorityBugs": get_count(bugs_high_priority),
+                "teamCount": len(getattr(teams, "data", []) or [])
+            },
+            "recentBugs": getattr(recent_bugs, "data", []) or [],
+            "teams": getattr(teams, "data", []) or [],
+            "users": getattr(profiles, "data", []) or []
+        }
+    except Exception:
+        logger.exception("Error fetching admin dashboard data")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+class CreateTeamRequest(BaseModel):
+    name: str
+    slug: str
+
+@app.post("/api/admin/teams")
+@limiter.limit("10/minute")
+def create_team(request: Request, payload: CreateTeamRequest):
+    _require_admin(request)
+    try:
+        res = sb.table("teams").insert({"name": payload.name, "slug": payload.slug}).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=400, detail=str(res.error))
+        return getattr(res, "data", [{}])[0]
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error creating team")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/teams/{team_id}")
+@limiter.limit("60/minute")
+def get_team_info(request: Request, team_id: str):
+    """Get team info by ID. Authenticated users only."""
+    _require_auth(request)
+    try:
+        res = sb.table("teams").select("name").eq("id", team_id).single().execute()
+        if getattr(res, "error", None) or not getattr(res, "data", None):
+            raise HTTPException(status_code=404, detail="Team not found")
+        return getattr(res, "data", {})
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(f"Error fetching team {team_id}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/profiles/me")
+@limiter.limit("60/minute")
+def get_my_profile(request: Request):
+    """Get profile info for the currently authenticated user."""
+    user_id = _require_auth(request)
+    try:
+        res = sb.table("profiles").select("full_name, email, role, team_id").eq("id", user_id).single().execute()
+        if getattr(res, "error", None):
+            return None
+        return getattr(res, "data", {})
+    except Exception:
+        logger.exception(f"Error fetching profile for {user_id}")
+        return None
+
+class AssignUsersRequest(BaseModel):
+    team_id: str
+    user_ids: List[str]
+
+@app.patch("/api/admin/profiles/assign-team")
+@limiter.limit("20/minute")
+def assign_users_to_team(request: Request, payload: AssignUsersRequest):
+    _require_admin(request)
+    if not payload.user_ids:
+        return {"status": "success"}
+    try:
+        res = sb.table("profiles").update({"team_id": payload.team_id}).in_("id", payload.user_ids).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=400, detail=str(res.error))
+        return {"status": "success", "updated_count": len(getattr(res, "data", []) or [])}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error assigning users to team")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @app.post("/api/admin/debug_notify")
 def admin_debug_notify(
@@ -525,20 +639,7 @@ class BugUpdate(BaseModel):
 def update_bug(request: Request, bug_id: str, update: BugUpdate):
     """Partial update for bug. Requires authenticated user. Validates all fields."""
     # --- Auth check ---
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authentication required")
-    token = auth_header[len("Bearer "):].strip()
-    try:
-        user_resp = sb.auth.get_user(token)
-        caller = getattr(user_resp, "user", None)
-        if not caller or not caller.id:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception("Token verification failed for PATCH /api/bugs")
-        raise HTTPException(status_code=401, detail="Token verification failed")
+    user_id = _require_auth(request)
 
     allowed_fields = {k: v for k, v in update.dict().items() if v is not None}
     if not allowed_fields:
@@ -570,18 +671,18 @@ def update_bug(request: Request, bug_id: str, update: BugUpdate):
 
     # Check caller role for permission
     try:
-        profile_res = sb.table("profiles").select("role").eq("id", caller.id).single().execute()
+        profile_res = sb.table("profiles").select("role").eq("id", user_id).single().execute()
         caller_role = (getattr(profile_res, "data", None) or {}).get("role", "member")
     except Exception:
         caller_role = "member"
 
     is_admin = caller_role in ("admin", "super_admin")
-    is_owner = before.get("submitted_by") == caller.id
-    is_assignee = before.get("assigned_to") == caller.id
+    is_owner = before.get("submitted_by") == user_id
+    is_assignee = before.get("assigned_to") == user_id
     if not (is_admin or is_owner or is_assignee):
         raise HTTPException(status_code=403, detail="Not authorized to update this bug")
 
-    logger.info(f"Updating bug {bug_id} by user {caller.id} - before: {before}")
+    logger.info(f"Updating bug {bug_id} by user {user_id} - before: {before}")
     try:
         res = sb.table("bugs").update(allowed_fields).eq("id", bug_id).execute()
     except Exception:
@@ -710,4 +811,67 @@ def generate_draft(request: Request, ticket_id: str):
         return {"draft": draft}
     except Exception as e:
         logger.exception(f"Error generating draft for ticket {ticket_id}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# --- Notifications API ---
+
+@app.get("/api/notifications")
+@limiter.limit("60/minute")
+def get_notifications(request: Request):
+    """Get all notifications for the currently authenticated user."""
+    user_id = _require_auth(request)
+    try:
+        res = sb.table("notifications").select("id, type, title, message, entity_type, entity_id, is_read, created_at").eq("recipient_id", user_id).order("created_at", desc=True).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to fetch notifications")
+        return getattr(res, "data", [])
+    except Exception as e:
+        logger.exception("Error fetching notifications")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.patch("/api/notifications/{notification_id}/read")
+@limiter.limit("60/minute")
+def mark_notification_read(request: Request, notification_id: str):
+    """Mark a single notification as read."""
+    user_id = _require_auth(request)
+    try:
+        res = sb.table("notifications").update({"is_read": True}).eq("id", notification_id).eq("recipient_id", user_id).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to mark notification as read")
+        return {"status": "success"}
+    except Exception as e:
+        logger.exception("Error updating notification")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+class ReadAllRequest(BaseModel):
+    unread_ids: List[str]
+
+@app.post("/api/notifications/read-all")
+@limiter.limit("20/minute")
+def mark_all_notifications_read(request: Request, payload: ReadAllRequest):
+    """Mark multiple notifications as read."""
+    user_id = _require_auth(request)
+    if not payload.unread_ids:
+        return {"status": "success"}
+    try:
+        res = sb.table("notifications").update({"is_read": True}).in_("id", payload.unread_ids).eq("recipient_id", user_id).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to mark notifications as read")
+        return {"status": "success"}
+    except Exception as e:
+        logger.exception("Error updating notifications")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.delete("/api/notifications/clear-all")
+@limiter.limit("5/minute")
+def clear_all_notifications(request: Request):
+    """Delete all notifications for the currently authenticated user."""
+    user_id = _require_auth(request)
+    try:
+        res = sb.table("notifications").delete().eq("recipient_id", user_id).execute()
+        if getattr(res, "error", None):
+            raise HTTPException(status_code=500, detail="Failed to clear notifications")
+        return {"status": "success"}
+    except Exception as e:
+        logger.exception("Error clearing notifications")
         raise HTTPException(status_code=500, detail="Internal server error")

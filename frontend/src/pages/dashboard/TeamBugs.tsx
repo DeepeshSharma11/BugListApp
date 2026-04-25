@@ -50,12 +50,18 @@ export default function TeamBugs() {
 
         // Fetch team name once (only on first load when teamName not yet set)
         if (mounted && !teamName) {
-          const { data: teamData } = await supabase
-            .from('teams')
-            .select('name')
-            .eq('id', teamId)
-            .single()
-          if (mounted && teamData?.name) setTeamName(teamData.name)
+          try {
+            const token = auth.session?.access_token ?? ''
+            const teamRes = await fetch(`/api/teams/${teamId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (teamRes.ok) {
+              const teamData = await teamRes.json()
+              if (mounted && teamData?.name) setTeamName(teamData.name)
+            }
+          } catch (e) {
+            console.error("Error fetching team name", e)
+          }
         }
 
         const params = new URLSearchParams()

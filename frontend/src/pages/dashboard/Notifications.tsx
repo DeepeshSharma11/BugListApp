@@ -48,28 +48,34 @@ export default function Notifications() {
       setLoading(true)
       setError(null)
 
-      // Get current user id first
-      const auth = await getAuthState()
-      const userId = auth.session?.user?.id
-      if (!userId) {
-        setError('Not logged in.')
-        setLoading(false)
-        return
-      }
+      try {
+        const auth = await getAuthState()
+        const session = auth.session
+        if (!session?.user?.id) {
+          setError('Not logged in.')
+          setLoading(false)
+          return
+        }
 
-      const { data, error: fetchError } = await supabase
-        .from('notifications')
-        .select('id, type, title, message, entity_type, entity_id, is_read, created_at')
-        .eq('recipient_id', userId)
-        .order('created_at', { ascending: false })
+        const token = session.access_token
+        const res = await fetch('/api/notifications', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
 
-      if (fetchError) {
-        setError(fetchError.message)
-      } else {
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          throw new Error(j.detail || 'Failed to fetch notifications')
+        }
+
+        const data = await res.json()
         setNotifications(data ?? [])
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     void loadNotifications()
@@ -77,21 +83,32 @@ export default function Notifications() {
 
   async function markOneAsRead(id: string) {
     setSaving(true)
-    const { error: updateError } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', id)
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
+      
+      const res = await fetch(`/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
-    if (updateError) {
-      setError(updateError.message)
-    } else {
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to mark as read')
+      }
+
       setNotifications((current) =>
         current.map((notification) =>
           notification.id === id ? { ...notification, is_read: true } : notification
         )
       )
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function markAllAsRead() {
@@ -103,19 +120,60 @@ export default function Notifications() {
       return
     }
 
-    const { error: updateError } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .in('id', unreadIds)
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
 
-    if (updateError) {
-      setError(updateError.message)
-    } else {
+      const res = await fetch('/api/notifications/read-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ unread_ids: unreadIds })
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to mark all as read')
+      }
+
       setNotifications((current) =>
         current.map((notification) => ({ ...notification, is_read: true }))
       )
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
+  }
+
+  async function clearAllNotifications() {
+    if (!window.confirm('Are you sure you want to delete all notifications permanently?')) return
+    
+    setSaving(true)
+    try {
+      const auth = await getAuthState()
+      const token = auth.session?.access_token ?? ''
+
+      const res = await fetch('/api/notifications/clear-all', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || 'Failed to clear notifications')
+      }
+
+      setNotifications([])
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const unreadCount = notifications.filter((notification) => !notification.is_read).length
@@ -130,14 +188,24 @@ export default function Notifications() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void markAllAsRead()}
-          disabled={saving || unreadCount === 0}
-          className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-md disabled:hover:bg-blue-600"
-        >
-          Mark All As Read
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void markAllAsRead()}
+            disabled={saving || unreadCount === 0}
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-md disabled:hover:bg-blue-600"
+          >
+            Mark All As Read
+          </button>
+          <button
+            type="button"
+            onClick={() => void clearAllNotifications()}
+            disabled={saving || notifications.length === 0}
+            className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900/30 px-5 py-2.5 text-sm font-bold text-red-600 dark:text-red-400 transition hover:bg-red-100 dark:hover:bg-red-900/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear All
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-4 text-sm font-medium text-[var(--text-color)]">
