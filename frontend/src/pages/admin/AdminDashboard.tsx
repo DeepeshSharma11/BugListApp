@@ -538,7 +538,7 @@ export default function AdminDashboard() {
               Abhi tak koi bug report nahi aayi.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
               {recentBugs.map((bug) => (
                 <Link
                   key={bug.id}
