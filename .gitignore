@@ -106,3 +106,4 @@ backend/reports/
 
 *.pem
 *.key
+site_tester.py
