@@ -333,115 +333,117 @@ export default function Leaderboard() {
         )}
 
         {/* Member rows */}
-        {!loading && members.map((m, idx) => {
-          const isMe   = m.user_id === currentUserId
-          const isTop3 = idx < 3
-          const rowBg  = isMe ? 'var(--accent-soft)' : isTop3 ? MEDAL_BG[idx] : 'transparent'
-          const rowBorder = isMe ? '1px solid var(--accent)' : '1px solid transparent'
+        <div style={{ maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
+          {!loading && members.map((m, idx) => {
+            const isMe   = m.user_id === currentUserId
+            const isTop3 = idx < 3
+            const rowBg  = isMe ? 'var(--accent-soft)' : isTop3 ? MEDAL_BG[idx] : 'transparent'
+            const rowBorder = isMe ? '1px solid var(--accent)' : '1px solid transparent'
 
-          return (
-            <div
-              key={m.user_id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: isMobile ? '10px 8px' : '11px 8px',
-                borderRadius: 12,
-                marginBottom: 4,
-                background: rowBg,
-                border: rowBorder,
-                transition: 'background 0.15s',
-                minWidth: 0,           // prevent row from expanding container
-                overflow: 'hidden',    // clip children
-              }}
-            >
-              {/* Rank */}
-              <div style={{
-                width: 28, flexShrink: 0, textAlign: 'center',
-                fontSize: isTop3 ? 18 : 13, fontWeight: 800,
-                color: isTop3 ? MEDAL_RING[idx] : 'var(--muted-text)',
-              }}>
-                {isTop3 ? MEDAL[idx] : `#${m.rank}`}
-              </div>
-
-              {/* Avatar */}
-              <Avatar name={m.full_name} url={m.avatar_url} size={isMobile ? 34 : 38} />
-
-              {/* Name + email */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+            return (
+              <div
+                key={m.user_id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: isMobile ? '10px 8px' : '11px 8px',
+                  borderRadius: 12,
+                  marginBottom: 4,
+                  background: rowBg,
+                  border: rowBorder,
+                  transition: 'background 0.15s',
+                  minWidth: 0,           // prevent row from expanding container
+                  overflow: 'hidden',    // clip children
+                }}
+              >
+                {/* Rank */}
                 <div style={{
-                  fontWeight: 700, fontSize: isMobile ? 13 : 14,
-                  color: 'var(--text-color)',
-                  display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap',
-                  overflow: 'hidden',
+                  width: 28, flexShrink: 0, textAlign: 'center',
+                  fontSize: isTop3 ? 18 : 13, fontWeight: 800,
+                  color: isTop3 ? MEDAL_RING[idx] : 'var(--muted-text)',
                 }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? 90 : 200 }}>
-                    {m.full_name || 'Unknown'}
-                  </span>
-                  {isMe && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: '1px 6px',
-                      borderRadius: 20, background: 'var(--accent)', color: '#fff',
-                      letterSpacing: 0.4, flexShrink: 0,
-                    }}>YOU</span>
+                  {isTop3 ? MEDAL[idx] : `#${m.rank}`}
+                </div>
+
+                {/* Avatar */}
+                <Avatar name={m.full_name} url={m.avatar_url} size={isMobile ? 34 : 38} />
+
+                {/* Name + email */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 700, fontSize: isMobile ? 13 : 14,
+                    color: 'var(--text-color)',
+                    display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap',
+                    overflow: 'hidden',
+                  }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? 90 : 200 }}>
+                      {m.full_name || 'Unknown'}
+                    </span>
+                    {isMe && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 6px',
+                        borderRadius: 20, background: 'var(--accent)', color: '#fff',
+                        letterSpacing: 0.4, flexShrink: 0,
+                      }}>YOU</span>
+                    )}
+                  </div>
+                  {!isMobile && (
+                    <div style={{
+                      fontSize: 12, color: 'var(--muted-text)', marginTop: 1,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {m.email || ''}
+                    </div>
                   )}
                 </div>
-                {!isMobile && (
-                  <div style={{
-                    fontSize: 12, color: 'var(--muted-text)', marginTop: 1,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {m.email || ''}
-                  </div>
-                )}
-              </div>
 
-              {/* Stats */}
-              <div style={{
-                display: 'flex', alignItems: 'center',
-                gap: isMobile ? 12 : 20, flexShrink: 0,
-              }}>
-                {/* Resolved — always visible */}
-                <div style={{ width: isMobile ? 42 : 50, textAlign: 'center' }}>
-                  <div style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#10b981', lineHeight: 1.1 }}>
-                    {m.resolved_count}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Fixed</div>
-                </div>
-
-                {/* Assigned — desktop only */}
-                {!isMobile && (
-                  <div style={{ width: 50, textAlign: 'center' }}>
-                    <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
-                      {m.total_assigned}
+                {/* Stats */}
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  gap: isMobile ? 12 : 20, flexShrink: 0,
+                }}>
+                  {/* Resolved — always visible */}
+                  <div style={{ width: isMobile ? 42 : 50, textAlign: 'center' }}>
+                    <div style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#10b981', lineHeight: 1.1 }}>
+                      {m.resolved_count}
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Assigned</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Fixed</div>
                   </div>
-                )}
 
-                {/* Submitted — desktop only */}
-                {!isMobile && (
-                  <div style={{ width: 56, textAlign: 'center' }}>
-                    <div style={{ fontSize: 17, fontWeight: 800, color: '#f59e0b', lineHeight: 1.1 }}>
-                      {m.submitted_count}
+                  {/* Assigned — desktop only */}
+                  {!isMobile && (
+                    <div style={{ width: 50, textAlign: 'center' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
+                        {m.total_assigned}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Assigned</div>
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Submitted</div>
-                  </div>
-                )}
+                  )}
 
-                {/* Rate — always visible */}
-                <div style={{ width: isMobile ? 42 : 50, textAlign: 'center' }}>
-                  <div style={{
-                    fontSize: isMobile ? 14 : 16, fontWeight: 800,
-                    color: rateColor(m.resolution_rate), lineHeight: 1.1,
-                  }}>
-                    {m.resolution_rate}%
+                  {/* Submitted — desktop only */}
+                  {!isMobile && (
+                    <div style={{ width: 56, textAlign: 'center' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: '#f59e0b', lineHeight: 1.1 }}>
+                        {m.submitted_count}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Submitted</div>
+                    </div>
+                  )}
+
+                  {/* Rate — always visible */}
+                  <div style={{ width: isMobile ? 42 : 50, textAlign: 'center' }}>
+                    <div style={{
+                      fontSize: isMobile ? 14 : 16, fontWeight: 800,
+                      color: rateColor(m.resolution_rate), lineHeight: 1.1,
+                    }}>
+                      {m.resolution_rate}%
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Rate</div>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--muted-text)', fontWeight: 600 }}>Rate</div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
 
         {/* Large-team note */}
         {!loading && members.length >= 20 && (
