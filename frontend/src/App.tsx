@@ -1,5 +1,5 @@
-import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import UserRoute from './components/UserRoute'
 import AdminRoute from './components/AdminRoute'
@@ -27,6 +27,18 @@ import Support from './pages/support/Support'
 import ParticleBackground from './components/ParticleBackground'
 
 export default function App() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Global check: if URL has a recovery hash, force redirect to /update-password
+  // This handles emails triggered directly from the Supabase Dashboard
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.includes('type=recovery') && location.pathname !== '/update-password') {
+      navigate('/update-password' + hash, { replace: true })
+    }
+  }, [navigate, location.pathname])
+
   return (
     <>
       <ParticleBackground />

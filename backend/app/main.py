@@ -44,7 +44,14 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     logger.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
     raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
 
-ADMIN_SECRET = os.getenv("ADMIN_SECRET")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET")  # legacy, kept for env compat only
+
+# Precompiled constants (avoid re-compiling on every request)
+import re as _re
+UUID_RE = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', _re.I)
+VALID_SEVERITY = {"low", "medium", "high", "critical"}
+VALID_PRIORITY = {"low", "normal", "high", "urgent"}
+VALID_STATUS   = {"open", "in_progress", "resolved", "closed", "rejected"}
 
 logger.info("Initializing Supabase client...")
 sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -61,7 +68,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://bugtrac.deepeshtech8433.workers.dev"
+        "http://localhost:5173",
+        "http://18.207.178.178",
+        "https://bugtrac.deepeshtech8433.workers.dev",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -222,12 +231,6 @@ def create_bug(
     files: Optional[List[UploadFile]] = File(None),
 ):
     logger.info(f"Received request to create bug: '{title}' by user {submitted_by} for team {team_id}")
-
-    # --- Server-side validation ---
-    import re as _re
-    UUID_RE = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', _re.I)
-    VALID_SEVERITY = {"low", "medium", "high", "critical"}
-    VALID_PRIORITY = {"low", "normal", "high", "urgent"}
 
     title = (title or "").strip()
     description = (description or "").strip()
@@ -520,19 +523,65 @@ class BugUpdate(BaseModel):
 @app.patch("/api/bugs/{bug_id}")
 @limiter.limit("20/minute")
 def update_bug(request: Request, bug_id: str, update: BugUpdate):
-    """Partial update for bug. Triggers in DB will generate notifications as needed."""
+    """Partial update for bug. Requires authenticated user. Validates all fields."""
+    # --- Auth check ---
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = auth_header[len("Bearer "):].strip()
+    try:
+        user_resp = sb.auth.get_user(token)
+        caller = getattr(user_resp, "user", None)
+        if not caller or not caller.id:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Token verification failed for PATCH /api/bugs")
+        raise HTTPException(status_code=401, detail="Token verification failed")
+
     allowed_fields = {k: v for k, v in update.dict().items() if v is not None}
     if not allowed_fields:
         raise HTTPException(status_code=400, detail="No fields to update")
-    # Log before update for debugging notification triggers
+
+    # Validate enum fields if provided
+    if "status" in allowed_fields and allowed_fields["status"] not in VALID_STATUS:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Allowed: {VALID_STATUS}")
+    if "severity" in allowed_fields and allowed_fields["severity"] not in VALID_SEVERITY:
+        raise HTTPException(status_code=400, detail=f"Invalid severity. Allowed: {VALID_SEVERITY}")
+    if "priority" in allowed_fields and allowed_fields["priority"] not in VALID_PRIORITY:
+        raise HTTPException(status_code=400, detail=f"Invalid priority. Allowed: {VALID_PRIORITY}")
+    if "title" in allowed_fields:
+        allowed_fields["title"] = allowed_fields["title"].strip()
+        if len(allowed_fields["title"]) < 5:
+            raise HTTPException(status_code=400, detail="Title must be at least 5 characters")
+        if len(allowed_fields["title"]) > 200:
+            raise HTTPException(status_code=400, detail="Title must be at most 200 characters")
+
+    # Ownership check: only admin, submitter, or assignee can update
     try:
         before_res = sb.table("bugs").select("status,assigned_to,submitted_by,title").eq("id", bug_id).execute()
     except Exception:
         logger.exception("Exception when fetching bug before update")
-        before_res = None
+        raise HTTPException(status_code=500, detail="DB error")
     before = (getattr(before_res, "data", []) or [None])[0]
-    logger.info(f"Updating bug {bug_id} - before: {before}")
+    if not before:
+        raise HTTPException(status_code=404, detail="Bug not found")
 
+    # Check caller role for permission
+    try:
+        profile_res = sb.table("profiles").select("role").eq("id", caller.id).single().execute()
+        caller_role = (getattr(profile_res, "data", None) or {}).get("role", "member")
+    except Exception:
+        caller_role = "member"
+
+    is_admin = caller_role in ("admin", "super_admin")
+    is_owner = before.get("submitted_by") == caller.id
+    is_assignee = before.get("assigned_to") == caller.id
+    if not (is_admin or is_owner or is_assignee):
+        raise HTTPException(status_code=403, detail="Not authorized to update this bug")
+
+    logger.info(f"Updating bug {bug_id} by user {caller.id} - before: {before}")
     try:
         res = sb.table("bugs").update(allowed_fields).eq("id", bug_id).execute()
     except Exception:
@@ -544,7 +593,6 @@ def update_bug(request: Request, bug_id: str, update: BugUpdate):
     data = getattr(res, "data", None)
     if not data:
         raise HTTPException(status_code=404, detail="Bug not found or not updated")
-    # Log after update for debugging
     logger.info(f"Updated bug {bug_id} - after: {data[0]}")
     return data[0]
 

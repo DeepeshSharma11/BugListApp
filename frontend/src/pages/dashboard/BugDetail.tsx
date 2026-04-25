@@ -25,6 +25,7 @@ export default function BugDetail() {
   const [updating, setUpdating] = useState(false)
   const [newStatus, setNewStatus] = useState<string | null>(null)
   const [canUpdate, setCanUpdate] = useState(false)
+  const [updateError, setUpdateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -133,15 +134,21 @@ export default function BugDetail() {
                     onClick={async () => {
                       if (!bug) return
                       setUpdating(true)
+                      setUpdateError(null)
                       try {
+                        const { data: { session } } = await (await import('../../lib/supabaseClient')).supabase.auth.getSession()
+                        const token = session?.access_token ?? ''
                         const res = await fetch(`/api/bugs/${bug.id}`, {
                           method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                          },
                           body: JSON.stringify({ status: newStatus ?? bug.status }),
                         })
                         if (!res.ok) {
                           const j = await res.json().catch(() => ({}))
-                          alert(j.detail || 'Failed to update status')
+                          setUpdateError(j.detail || 'Failed to update status')
                         } else {
                           const updated = await res.json()
                           setBug(updated)
@@ -149,7 +156,7 @@ export default function BugDetail() {
                         }
                       } catch (e) {
                         console.error(e)
-                        alert('Update failed')
+                        setUpdateError('Update failed. Please try again.')
                       } finally {
                         setUpdating(false)
                       }
@@ -158,6 +165,9 @@ export default function BugDetail() {
                   >
                     {updating ? 'Updating...' : 'Save Changes'}
                   </button>
+                  {updateError && (
+                    <p className="text-xs text-red-500 font-medium mt-1">{updateError}</p>
+                  )}
                 </div>
               </div>
             )}
