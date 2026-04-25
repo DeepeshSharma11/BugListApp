@@ -44,7 +44,12 @@ export default function SubmitPage() {
   const [profileReady, setProfileReady] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+    if (fileRejections.length > 0) {
+      setFormError("Some files were rejected. Each file must be an image and under 5MB.")
+    } else {
+      setFormError(null)
+    }
     setFiles((current) => [...current, ...acceptedFiles].slice(0, 5))
   }, [])
 
@@ -370,7 +375,7 @@ export default function SubmitPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 </div>
                 <p className="font-medium">Drag & drop images here</p>
-                <p className="text-sm text-[var(--muted-text)] mt-1">or click to browse files (max 5)</p>
+                <p className="text-sm text-[var(--muted-text)] mt-1">or click to browse files (Max 5 files, 5MB each)</p>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
