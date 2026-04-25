@@ -1,13 +1,13 @@
 # Bug Tracker App
 
-Bug Tracker App is a full-stack bug reporting and management system built with:
+Bug Tracker App is a full-stack bug reporting and management system built with a **3-Tier Architecture** for enhanced security:
 
-- `React + Vite + TypeScript` on the frontend
-- `FastAPI` on the backend
-- `Expo + React Native` for Android mobile
-- `Supabase` for auth, database, and storage
-- `Docker Compose` for containerized production deployment
-- `GitHub Actions` for automated CI/CD pipeline
+- **Frontend**: `React + Vite + TypeScript` (Handles UI and routes all data requests through the backend API. Only uses Supabase Client for Auth and Storage).
+- **Backend**: `FastAPI` (Handles all business logic, database queries, and interacts with the Supabase Database securely).
+- **Mobile**: `Expo + React Native` for Android mobile
+- **Database/Storage**: `Supabase` (Auth, Postgres DB, and Storage)
+- **Deployment**: `Docker Compose` (Nginx + FastAPI) on AWS EC2
+- **CI/CD**: `GitHub Actions` for automated pipeline
 
 ## Project Structure
 
@@ -52,6 +52,7 @@ VITE_SUPABASE_ANON=your_supabase_anon_key
 
 ### Backend (`backend/.env`)
 ```env
+# Modern opaque tokens format (sb_secret_...)
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 PORT=8000
@@ -62,10 +63,8 @@ SMTP_EMAIL=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 ```
 
-Important:
-- Frontend and backend must point to the same Supabase project
-- Frontend uses anon key
-- Backend uses service role key
+**Architecture Note**: 
+The app uses a 3-tier architecture. The frontend uses the Anon key *only* for Authentication and Storage. All database interactions (`profiles`, `bugs`, `notifications`, etc.) are routed through the FastAPI backend (`/api/...`), which securely uses the Service Role key.
 
 ## SQL Setup
 
@@ -123,6 +122,12 @@ To enable this, add the following Repository Secrets in GitHub (`Settings > Secr
 - `EC2_USERNAME`: Usually `ubuntu`.
 - `EC2_SSH_KEY`: Your private SSH key (`.pem` file content).
 
+### Cloudflare Setup (Important)
+If you are proxying your EC2 instance through Cloudflare:
+1. Go to your Cloudflare Dashboard -> **SSL/TLS -> Overview**.
+2. Set the encryption mode to **Flexible** (Nginx is configured to listen on Port 80. Setting it to "Full" will cause a `521 Web Server is Down` error).
+3. Ensure your EC2 Security Group allows inbound traffic on Port 80.
+
 ## Admin Access & Features
 
 Admin authentication is handled securely via **Supabase JWTs**. No admin secrets are stored in the frontend.
@@ -144,8 +149,10 @@ where email = 'your-email@example.com';
 
 ### User
 - Submit bugs with duplicate detection (fingerprinting)
+- Enforced 5MB file upload limit per screenshot
 - Upload screenshots (stored in Supabase `bug-screenshots` bucket)
 - Access team pages and view notifications
+- Clear All Notifications functionality
 - Submit Support Tickets from the Help Center
 
 ### Performance & UI
