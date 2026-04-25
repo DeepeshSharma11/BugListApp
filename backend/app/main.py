@@ -222,11 +222,37 @@ def create_bug(
     files: Optional[List[UploadFile]] = File(None),
 ):
     logger.info(f"Received request to create bug: '{title}' by user {submitted_by} for team {team_id}")
-    
-    # Validate lengths
-    if len(description or "") < 20:
-        logger.warning(f"Bug creation failed: description too short ({len(description or '')} chars)")
+
+    # --- Server-side validation ---
+    import re as _re
+    UUID_RE = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', _re.I)
+    VALID_SEVERITY = {"low", "medium", "high", "critical"}
+    VALID_PRIORITY = {"low", "normal", "high", "urgent"}
+
+    title = (title or "").strip()
+    description = (description or "").strip()
+
+    if not title or len(title) < 5:
+        raise HTTPException(status_code=400, detail="Title must be at least 5 characters")
+    if len(title) > 200:
+        raise HTTPException(status_code=400, detail="Title must be at most 200 characters")
+    if len(description) < 20:
+        logger.warning(f"Bug creation failed: description too short ({len(description)} chars)")
         raise HTTPException(status_code=400, detail="Description must be at least 20 characters")
+    if len(description) > 10000:
+        raise HTTPException(status_code=400, detail="Description too long (max 10000 characters)")
+    if severity not in VALID_SEVERITY:
+        raise HTTPException(status_code=400, detail=f"Invalid severity. Allowed: {VALID_SEVERITY}")
+    if priority not in VALID_PRIORITY:
+        raise HTTPException(status_code=400, detail=f"Invalid priority. Allowed: {VALID_PRIORITY}")
+    if not UUID_RE.match(submitted_by):
+        raise HTTPException(status_code=400, detail="Invalid submitted_by format")
+    if not UUID_RE.match(team_id):
+        raise HTTPException(status_code=400, detail="Invalid team_id format")
+    if environment and len(environment) > 200:
+        environment = environment[:200]
+    if version and len(version) > 50:
+        version = version[:50]
 
     # Compute fingerprint
     fingerprint = compute_fingerprint(title, description, environment or "")

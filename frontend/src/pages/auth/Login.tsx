@@ -14,13 +14,17 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // All validation is server-side; we just map error messages for UX
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes('invalid login credentials')) {
+        setError('Incorrect email or password. Please try again.');
+      } else if (error.message.toLowerCase().includes('email not confirmed')) {
+        setError('Please confirm your email before logging in.');
+      } else {
+        setError(error.message);
+      }
     } else {
       navigate('/dashboard');
     }

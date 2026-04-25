@@ -38,6 +38,7 @@ export default function SubmitPage() {
   const [duplicate, setDuplicate] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [teamId, setTeamId] = useState<string | null>(null)
   const [submittedBy, setSubmittedBy] = useState<string | null>(null)
   const [profileReady, setProfileReady] = useState(false)
@@ -84,16 +85,16 @@ export default function SubmitPage() {
     // load my bugs after profile is ready
     if (!profileReady || !submittedBy) return
     let mounted = true
-    ;(async () => {
-      try {
-        const res = await fetch(`/api/bugs?submitted_by=${encodeURIComponent(submittedBy)}&page=${myPage}&per_page=${myPerPage}`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (mounted) setMyBugs(data.items || [])
-      } catch (e) {
-        console.error('Failed to load my bugs', e)
-      }
-    })()
+      ; (async () => {
+        try {
+          const res = await fetch(`/api/bugs?submitted_by=${encodeURIComponent(submittedBy)}&page=${myPage}&per_page=${myPerPage}`)
+          if (!res.ok) return
+          const data = await res.json()
+          if (mounted) setMyBugs(data.items || [])
+        } catch (e) {
+          console.error('Failed to load my bugs', e)
+        }
+      })()
 
     return () => {
       mounted = false
@@ -137,21 +138,7 @@ export default function SubmitPage() {
       return
     }
 
-    if (!submittedBy) {
-      setFormError('Current user session nahi mil rahi. Dobara login karke try karo.')
-      return
-    }
-
-    if (!teamId) {
-      setFormError('Aapke profile me team assigned nahi hai. Team assign karo phir bug submit hoga.')
-      return
-    }
-
-    if (description.trim().length < 20) {
-      setFormError('Description kam se kam 20 characters ki honi chahiye.')
-      return
-    }
-
+    // All other validation (title, description length, team, UUIDs) is enforced server-side
     setSubmitting(true)
 
     try {
@@ -159,8 +146,8 @@ export default function SubmitPage() {
       body.append('title', title)
       body.append('description', description)
       body.append('environment', environment)
-      body.append('submitted_by', submittedBy)
-      body.append('team_id', teamId)
+      body.append('submitted_by', submittedBy || '')
+      body.append('team_id', teamId || '')
       // send category/customCategory as tags (no DB schema change required)
       const tagsParts: string[] = []
       if (category && category.trim() && category !== '__custom__') tagsParts.push(category.trim())
@@ -248,7 +235,8 @@ export default function SubmitPage() {
       setFiles([])
       setDuplicate(null)
       setRefreshTrigger(prev => prev + 1)
-      alert(`Bug submitted successfully: ${bugId}`)
+      setSuccessMsg(`Bug submitted successfully! ID: ${bugId}`)
+      setTimeout(() => setSuccessMsg(null), 6000)
     } catch (error) {
       console.error('Submit failed:', error)
       setFormError(
@@ -284,6 +272,12 @@ export default function SubmitPage() {
         </div>
       )}
 
+      {successMsg && (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-900 p-4 text-sm font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+          <span>✓</span> {successMsg}
+        </div>
+      )}
+
       {formError && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-900 p-4 text-sm font-medium text-red-700 dark:text-red-400">
           {formError}
@@ -292,7 +286,7 @@ export default function SubmitPage() {
 
       <div className="card mb-10 p-6 sm:p-8 lg:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-2">
-          
+
           {/* Left Column */}
           <div>
             <Field label="Title">
@@ -394,15 +388,15 @@ export default function SubmitPage() {
 
         </div>
 
-      <div className="mt-8 flex justify-end">
-        <button
-          type="submit"
-          disabled={submitting || !profileReady}
-          className="rounded-xl bg-blue-600 px-8 py-3.5 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {submitting ? 'Submitting...' : 'Submit Bug'}
-        </button>
-      </div>
+        <div className="mt-8 flex justify-end">
+          <button
+            type="submit"
+            disabled={submitting || !profileReady}
+            className="rounded-xl bg-blue-600 px-8 py-3.5 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Submitting...' : 'Submit Bug'}
+          </button>
+        </div>
       </div>
 
       {/* My Bugs inline section */}
@@ -445,7 +439,7 @@ export default function SubmitPage() {
                 </div>
               </a>
             ))}
-            
+
           {(!myBugs || myBugs.length === 0) && (
             <div className="text-center py-8 text-[var(--muted-text)] font-medium bg-[var(--soft-surface)] rounded-xl border border-dashed border-[var(--border-color)]">
               No bugs found.

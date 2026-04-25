@@ -17,14 +17,11 @@ export default function Signup() {
     setError('');
     setMessage('');
 
+    // All real validation happens server-side (Supabase Auth)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
+      options: { data: { full_name: fullName.trim() } },
     });
 
     if (error) {
@@ -105,7 +102,7 @@ export default function Signup() {
                 autoComplete="new-password"
                 required
                 className="w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/5 text-white placeholder-white/40 focus:bg-white/10 focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all duration-200 outline-none sm:text-sm"
-                placeholder="••••••••"
+                placeholder="Min. 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
