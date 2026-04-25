@@ -107,3 +107,5 @@ backend/reports/
 *.pem
 *.key
 site_tester.py
+SItet.py
+sitet.py
