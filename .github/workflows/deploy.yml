@@ -39,8 +39,8 @@ jobs:
 
             # Build sequentially with memory cap to prevent OOM freeze
             export NODE_OPTIONS="--max-old-space-size=512"
-            docker compose build --no-cache backend
-            docker compose build --no-cache nginx
+            docker compose build backend
+            docker compose build nginx
 
             # Start fresh
             docker compose up -d
