@@ -13,10 +13,16 @@
 html, body, #root { height: 100%; }
 
 html {
-  scroll-behavior: smooth;
+  /* smooth scroll removed — causes jank on low-end devices */
+  scroll-behavior: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizeSpeed;
+}
+
+/* Force GPU-accelerated scrolling on all touch devices */
+* {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Light Theme Tokens ──────────────────────────────────── */
@@ -67,11 +73,8 @@ body {
   border-radius: var(--radius-card);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transform: translateZ(0);
-  will-change: transform, backdrop-filter;
-  backface-visibility: hidden;
+  /* backdrop-filter removed — it forces GPU re-composite on every scroll frame */
+  contain: layout style; /* isolate reflow to card only */
 }
 @media (min-width: 640px) { .card { padding: 1.75rem; } }
 
