@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { supabase } from '../../lib/supabaseClient'
 
 interface SupportTicket {
   id: string
@@ -33,15 +34,11 @@ export default function AdminSupport() {
     setLoading(true)
     setError(null)
     try {
-      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
-      if (!adminSecret) {
-        throw new Error('VITE_ADMIN_SECRET not set in environment.')
-      }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Not authenticated.')
 
       const res = await fetch('/api/admin/support', {
-        headers: {
-          'x-admin-secret': adminSecret
-        }
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
 
       if (!res.ok) throw new Error('Failed to fetch tickets')
@@ -58,14 +55,13 @@ export default function AdminSupport() {
     if (!selectedTicket) return
     setGeneratingDraft(true)
     setError(null)
-    
     try {
-      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Not authenticated.')
+
       const res = await fetch(`/api/admin/support/${selectedTicket.id}/draft`, {
         method: 'POST',
-        headers: {
-          'x-admin-secret': adminSecret || ''
-        }
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
 
       if (!res.ok) throw new Error('Failed to generate AI draft')
@@ -87,12 +83,14 @@ export default function AdminSupport() {
     setSuccess(null)
 
     try {
-      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Not authenticated.')
+
       const res = await fetch(`/api/admin/support/${selectedTicket.id}/reply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret || ''
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           reply: replyMessage,
@@ -105,7 +103,7 @@ export default function AdminSupport() {
       setSuccess('Reply sent to user via email successfully!')
       setSelectedTicket(null)
       setReplyMessage('')
-      loadTickets() // Refresh the list
+      loadTickets()
     } catch (err: any) {
       setError(err.message)
     } finally {

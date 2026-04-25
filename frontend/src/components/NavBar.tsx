@@ -171,7 +171,7 @@ export default function NavBar() {
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled ? 'shadow-[0_2px_16px_rgba(0,0,0,0.08)] backdrop-blur-md' : 'backdrop-blur-sm'
       }`}
-      style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border-color)' }}
+      style={{ background: 'var(--surface-color)', borderBottom: '1px solid var(--border-color)', transform: 'translateZ(0)', willChange: 'transform, backdrop-filter', backfaceVisibility: 'hidden' }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
@@ -258,6 +258,11 @@ export default function NavBar() {
                       border: '1px solid var(--border-color)',
                       boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
                       overflow: 'hidden',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      transform: 'translateZ(0)',
+                      willChange: 'transform, backdrop-filter',
+                      backfaceVisibility: 'hidden',
                     }}
                   >
                     {/* User info header */}

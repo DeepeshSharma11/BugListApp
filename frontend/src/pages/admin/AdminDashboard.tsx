@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 
+
 interface BugRow {
   id: string
   title: string
@@ -305,9 +306,9 @@ export default function AdminDashboard() {
     setCleanupResult(null)
     setError(null)
     try {
-      const adminSecret = import.meta.env.VITE_ADMIN_SECRET
-      if (!adminSecret) {
-        setError('VITE_ADMIN_SECRET not set in frontend env. Set it only for local admin testing.')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setError('Not authenticated. Please log in again.')
         setRunningCleanup(false)
         return
       }
@@ -316,7 +317,7 @@ export default function AdminDashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ days: cleanupDays, dry_run: cleanupDryRun }),
       })

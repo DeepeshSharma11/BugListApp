@@ -356,14 +356,39 @@ def update_screenshots(request: Request, bug_id: str, urls: List[str]):
     return {"id": bug_id, "screenshot_urls": urls}
 
 
-def _require_admin(request: Request):
-    if not ADMIN_SECRET:
-        logger.error("ADMIN_SECRET not configured on server")
-        raise HTTPException(status_code=403, detail="Admin secret not configured")
-    hdr = request.headers.get("x-admin-secret")
-    if not hdr or hdr != ADMIN_SECRET:
-        logger.warning("Unauthorized admin attempt")
-        raise HTTPException(status_code=403, detail="Unauthorized")
+def _require_admin(request: Request) -> str:
+    """Verify caller is an authenticated admin via Supabase JWT.
+    Returns the user_id if authorized.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header[len("Bearer "):].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Empty token")
+    try:
+        # Verify JWT and get user via Supabase Auth
+        user_resp = sb.auth.get_user(token)
+        user = getattr(user_resp, "user", None)
+        if not user or not user.id:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        user_id = user.id
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Token verification failed")
+        raise HTTPException(status_code=401, detail="Token verification failed")
+    # Check profile role
+    try:
+        profile_res = sb.table("profiles").select("role").eq("id", user_id).single().execute()
+        role = (getattr(profile_res, "data", None) or {}).get("role", "")
+    except Exception:
+        logger.exception("Failed to fetch user role")
+        raise HTTPException(status_code=500, detail="DB error")
+    if role != "admin":
+        logger.warning(f"Non-admin user {user_id} attempted admin action")
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user_id
 
 
 @app.post("/api/admin/bugs/cleanup")
@@ -547,10 +572,7 @@ def create_support_ticket(request: Request, ticket: SupportTicketRequest):
 
 @app.get("/api/admin/support")
 def get_support_tickets(request: Request):
-    admin_secret = request.headers.get("x-admin-secret")
-    if not admin_secret or admin_secret != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
+    _require_admin(request)
     try:
         res = sb.table("support_tickets").select("*").order("created_at", desc=True).execute()
         if getattr(res, "error", None):
@@ -562,9 +584,7 @@ def get_support_tickets(request: Request):
 
 @app.post("/api/admin/support/{ticket_id}/reply")
 async def reply_support_ticket(request: Request, ticket_id: str, reply_data: SupportReplyRequest):
-    admin_secret = request.headers.get("x-admin-secret")
-    if not admin_secret or admin_secret != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+    _require_admin(request)
 
     try:
         # First get the ticket to get user's email and subject
@@ -601,9 +621,7 @@ async def reply_support_ticket(request: Request, ticket_id: str, reply_data: Sup
 
 @app.post("/api/admin/support/{ticket_id}/draft")
 def generate_draft(request: Request, ticket_id: str):
-    admin_secret = request.headers.get("x-admin-secret")
-    if not admin_secret or admin_secret != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+    _require_admin(request)
 
     try:
         res = sb.table("support_tickets").select("*").eq("id", ticket_id).execute()

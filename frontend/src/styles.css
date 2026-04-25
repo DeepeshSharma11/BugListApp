@@ -22,9 +22,9 @@ html {
 /* ─── Light Theme Tokens ──────────────────────────────────── */
 :root {
   --bg-color:        #f6f7fb;
-  --surface-color:   rgba(255, 255, 255, 0.92);
-  --soft-surface:    #eef0f8;
-  --card-color:      rgba(255, 255, 255, 0.85);
+  --surface-color:   rgba(255, 255, 255, 0.6);
+  --soft-surface:    rgba(238, 240, 248, 0.5);
+  --card-color:      rgba(255, 255, 255, 0.45);
   --border-color:    rgba(180, 185, 210, 0.35);
   --text-color:      #1a1d2e;
   --muted-text:      #6b7280;
@@ -40,9 +40,9 @@ html {
 /* ─── Dark Theme Tokens ───────────────────────────────────── */
 html[data-theme='dark'] {
   --bg-color:        #111318;
-  --surface-color:   rgba(22, 25, 37, 0.95);
-  --soft-surface:    #1e2130;
-  --card-color:      rgba(22, 25, 37, 0.80);
+  --surface-color:   rgba(22, 25, 37, 0.6);
+  --soft-surface:    rgba(30, 33, 48, 0.5);
+  --card-color:      rgba(22, 25, 37, 0.45);
   --border-color:    rgba(255, 255, 255, 0.08);
   --text-color:      #e8eaf6;
   --muted-text:      #8b92b0;
@@ -67,6 +67,11 @@ body {
   border-radius: var(--radius-card);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateZ(0);
+  will-change: transform, backdrop-filter;
+  backface-visibility: hidden;
 }
 @media (min-width: 640px) { .card { padding: 1.75rem; } }
 
