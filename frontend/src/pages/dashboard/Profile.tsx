@@ -11,8 +11,6 @@ export default function Profile() {
   const [teamId, setTeamId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [resetLoading, setResetLoading] = useState(false)
-  const [resetMessage, setResetMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -55,27 +53,6 @@ export default function Profile() {
     void loadProfile()
   }, [])
 
-  const handleResetPassword = async () => {
-    if (!email || email === 'Not available') {
-      setResetMessage('Email nahi mila, password reset link nahi bhej paaye.')
-      return
-    }
-
-    setResetLoading(true)
-    setResetMessage(null)
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/dashboard`,
-    })
-
-    if (resetError) {
-      setResetMessage(resetError.message)
-    } else {
-      setResetMessage('Password reset link aapke email par bhej diya gaya hai.')
-    }
-
-    setResetLoading(false)
-  }
 
   return (
     <div className="space-y-6">
@@ -136,24 +113,9 @@ export default function Profile() {
 
           <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4">
             <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-              A password reset link will be sent to <span className="font-bold">{email}</span>.
+              For security reasons, to change your password, please <strong>log out</strong> and use the <strong>"Forgot Password"</strong> link on the login screen.
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={handleResetPassword}
-            disabled={resetLoading || loading}
-            className="mt-6 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-md disabled:hover:bg-blue-600"
-          >
-            {resetLoading ? 'Sending reset link...' : 'Send Reset Link'}
-          </button>
-
-          {resetMessage && (
-            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-900/50 p-4 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              {resetMessage}
-            </div>
-          )}
 
           <div className="mt-8 pt-6 border-t border-[var(--border-color)]">
             <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">User ID</p>
