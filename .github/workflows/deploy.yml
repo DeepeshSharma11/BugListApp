@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - main
-      - master # Triggers on both main and master just in case
+      - master
 
 jobs:
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Execute deployment commands via SSH
@@ -18,13 +19,38 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 25m
           script: |
+            set -e
+
             cd ~/BugListApp
-            git pull origin main || git pull origin master
-            
-            # Build sequentially to prevent out-of-memory crashes on small EC2 instances
-            docker compose build backend
-            docker compose build nginx
-            
-            # Start the containers
+
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main || git reset --hard origin/master
+
+            # Free memory and clean stale layers before build
+            docker compose down --remove-orphans || true
+            docker system prune -f
+            sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+
+            # Build sequentially with memory cap to prevent OOM freeze
+            export NODE_OPTIONS="--max-old-space-size=512"
+            docker compose build --no-cache backend
+            docker compose build --no-cache nginx
+
+            # Start fresh
             docker compose up -d
+
+            # Wait and verify all containers are running
+            sleep 5
+            docker compose ps
+
+            # Fail deployment if any container exited
+            if docker compose ps | grep -E "Exit|exited"; then
+              echo "ERROR: One or more containers failed to start"
+              docker compose logs --tail=50
+              exit 1
+            fi
+
+            echo "Deployment successful"

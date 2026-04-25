@@ -48,7 +48,6 @@ BugTaskApp/
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON=your_supabase_anon_key
-VITE_ADMIN_SECRET=Scret value 
 ```
 
 ### Backend (`backend/.env`)
@@ -56,8 +55,7 @@ VITE_ADMIN_SECRET=Scret value
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 PORT=8000
-ADMIN_SECRET=Scret value
-GROQ_API_KEY=your groq key
+GROQ_API_KEY=your_groq_key
 
 # Email configuration for Admin Support Ticket replies
 SMTP_EMAIL=your_email@gmail.com
@@ -127,12 +125,13 @@ To enable this, add the following Repository Secrets in GitHub (`Settings > Secr
 
 ## Admin Access & Features
 
-Admin panel shows only when the logged-in user has a readable `public.profiles` row with role `admin` or `super_admin`.
+Admin authentication is handled securely via **Supabase JWTs**. No admin secrets are stored in the frontend.
+The admin panel shows only when the logged-in user has a readable `public.profiles` row with role `admin` or `super_admin`.
 
 To grant admin access manually via SQL:
 ```sql
 update public.profiles
-set role = 'super_admin'
+set role = 'admin'
 where email = 'your-email@example.com';
 ```
 
