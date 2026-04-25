@@ -115,3 +115,62 @@ export function SubmitBugsSkeleton({ count = 3 }: { count?: number }) {
     </div>
   )
 }
+
+/* ── Admin Dashboard skeleton ───────────────────────────── */
+export function AdminDashboardSkeleton() {
+  return (
+    <div className="w-full space-y-8 max-w-7xl mx-auto animate-pulse">
+      <div className="border-b pb-6 space-y-3" style={{ borderColor: 'var(--border-color)' }}>
+        <Sk className="h-8 w-64" />
+        <Sk className="h-4 w-96" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="card p-5 space-y-3" style={{ borderColor: 'var(--border-color)' }}>
+            <Sk className="h-4 w-1/2" />
+            <Sk className="h-8 w-16" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-8 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="card p-8 space-y-6">
+          <Sk className="h-6 w-32" />
+          <Sk className="h-10 w-full" />
+          <Sk className="h-10 w-full" />
+          <Sk className="h-12 w-full" />
+        </div>
+        <div className="card p-8 space-y-6">
+          <Sk className="h-6 w-48" />
+          <Sk className="h-10 w-full" />
+          <Sk className="h-64 w-full" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Leaderboard Row Skeleton ───────────────────────────── */
+export function LeaderboardRowSkeleton() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 8px', borderRadius: 12,
+      background: 'var(--soft-surface)', marginBottom: 6,
+      animation: 'pulse 1.5s ease-in-out infinite',
+    }}>
+      <div style={{ width: 28, height: 16, borderRadius: 6, background: 'var(--border-color)' }} />
+      <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--border-color)', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ width: '50%', height: 12, borderRadius: 6, background: 'var(--border-color)', marginBottom: 5 }} />
+        <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'var(--border-color)' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 16 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ width: 36, height: 28, borderRadius: 8, background: 'var(--border-color)' }} />
+        ))}
+      </div>
+    </div>
+  )
+}

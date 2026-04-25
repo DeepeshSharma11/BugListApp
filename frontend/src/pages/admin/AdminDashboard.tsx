@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { getAuthState } from '../../lib/auth'
+import { AdminDashboardSkeleton } from '../../components/Skeleton'
 
 
 interface BugRow {
@@ -339,6 +340,10 @@ export default function AdminDashboard() {
     } finally {
       setRunningCleanup(false)
     }
+  }
+
+  if (loading) {
+    return <AdminDashboardSkeleton />
   }
 
   return (

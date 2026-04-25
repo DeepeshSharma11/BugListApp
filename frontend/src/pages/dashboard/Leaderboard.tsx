@@ -81,28 +81,7 @@ function Stat({ label, value, color }: { label: string; value: string | number; 
   )
 }
 
-function RowSkeleton() {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 8px', borderRadius: 12,
-      background: 'var(--soft-surface)', marginBottom: 6,
-      animation: 'pulse 1.5s ease-in-out infinite',
-    }}>
-      <div style={{ width: 28, height: 16, borderRadius: 6, background: 'var(--border-color)' }} />
-      <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--border-color)', flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ width: '50%', height: 12, borderRadius: 6, background: 'var(--border-color)', marginBottom: 5 }} />
-        <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'var(--border-color)' }} />
-      </div>
-      <div style={{ display: 'flex', gap: 16 }}>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 36, height: 28, borderRadius: 8, background: 'var(--border-color)' }} />
-        ))}
-      </div>
-    </div>
-  )
-}
+import { LeaderboardRowSkeleton } from '../../components/Skeleton'
 
 /* ─── Podium Card (responsive-aware) ────────────────────────────── */
 function PodiumCard({
@@ -323,7 +302,7 @@ export default function Leaderboard() {
         )}
 
         {/* Loading skeletons */}
-        {loading && [0, 1, 2, 3, 4].map(i => <RowSkeleton key={i} />)}
+        {loading && [0, 1, 2, 3, 4].map(i => <LeaderboardRowSkeleton key={i} />)}
 
         {/* Empty */}
         {!loading && !error && members.length === 0 && (
