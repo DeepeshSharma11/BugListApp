@@ -470,7 +470,7 @@ export default function AdminDashboard() {
             <h3 className="mt-1 text-xl font-bold">All Teams And Assigned Users</h3>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
             {usersByTeam.length === 0 && !loading ? (
               <div className="rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--soft-surface)] p-8 text-center text-sm font-medium text-[var(--muted-text)]">
                 No teams have been created yet.
@@ -490,7 +490,7 @@ export default function AdminDashboard() {
                     </span>
                   </div>
 
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-4 space-y-2 max-h-[280px] overflow-y-auto pr-2">
                     {team.members.length === 0 ? (
                       <p className="text-sm text-slate-500">No users assigned yet.</p>
                     ) : (
