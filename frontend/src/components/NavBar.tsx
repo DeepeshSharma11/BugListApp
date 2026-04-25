@@ -146,7 +146,6 @@ export default function NavBar() {
     { name: 'Submit',        path: '/dashboard/submit' },
     { name: 'Team',          path: '/dashboard/team' },
     { name: 'Leaderboard',   path: '/dashboard/leaderboard' },
-    { name: 'Notifications', path: '/dashboard/notifications' },
   ];
   const navLinks = isAdmin
     ? [...baseLinks, { name: 'Admin', path: '/admin' }, { name: 'Support Tickets', path: '/admin/support' }]
@@ -212,6 +211,25 @@ export default function NavBar() {
 
           {/* ── Right: Theme + Profile dropdown ── */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
+            {/* Notifications (Icon Only) */}
+            {session && (
+              <Link
+                to="/dashboard/notifications"
+                title="Notifications"
+                className={`relative w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150
+                           ${isActive('/dashboard/notifications') ? 'nav-pill-active' : 'nav-pill'}`}
+                style={{ border: '1px solid var(--border-color)' }}
+              >
+                <Icon d={ICONS['Notifications']} size={17} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500
+                                   text-[10px] font-bold text-white flex items-center justify-center shadow-sm">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
@@ -220,7 +238,7 @@ export default function NavBar() {
               style={{ background: 'var(--soft-surface)', border: '1px solid var(--border-color)', color: 'var(--muted-text)' }}
             >
               <ThemeIcon />
-              <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+              <span className="hidden lg:inline">{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
 
             {session ? (
@@ -324,14 +342,17 @@ export default function NavBar() {
 
           {/* ── Mobile hamburger ── */}
           <div className="flex md:hidden items-center gap-2">
-            {unreadCount > 0 && (
+            {session && (
               <Link to="/dashboard/notifications"
-                className="relative w-9 h-9 rounded-lg flex items-center justify-center"
+                className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all
+                           ${isActive('/dashboard/notifications') ? 'nav-pill-active' : ''}`}
                 style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}>
-                <Icon d={ICONS['Notifications']} size={17} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[10px] font-bold text-white flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
+                <Icon d={ICONS['Notifications']} size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 text-[10px] font-bold text-white flex items-center justify-center shadow">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             )}
             <button
