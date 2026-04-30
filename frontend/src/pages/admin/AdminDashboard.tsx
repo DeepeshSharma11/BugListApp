@@ -561,7 +561,7 @@ export default function AdminDashboard() {
                         Created {formatDate(bug.created_at)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Team ID: {bug.team_id ?? 'Not assigned'}
+                        Team: {teams.find(t => t.id === bug.team_id)?.name ?? bug.team_id ?? 'Not assigned'}
                       </p>
                     </div>
 

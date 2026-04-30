@@ -9,6 +9,7 @@ export default function Profile() {
   const [email, setEmail] = useState('Not available')
   const [role, setRole] = useState('member')
   const [teamId, setTeamId] = useState<string | null>(null)
+  const [teamName, setTeamName] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,6 +41,20 @@ export default function Profile() {
         setEmail(authState.profile.email || authUser.email || 'Not available')
         setRole(authState.role)
         setTeamId(authState.profile.team_id)
+
+        // Fetch team name
+        const tid = authState.profile.team_id
+        if (tid && authState.session?.access_token) {
+          try {
+            const res = await fetch(`/api/teams/${tid}`, {
+              headers: { Authorization: `Bearer ${authState.session.access_token}` },
+            })
+            if (res.ok) {
+              const data = await res.json()
+              setTeamName(data.name || null)
+            }
+          } catch { /* skip */ }
+        }
       } else {
         setRole('unknown')
         setError(
@@ -95,8 +110,11 @@ export default function Profile() {
                   <p className="mt-1.5 text-base font-semibold capitalize">{role.replace('_', ' ')}</p>
                 </div>
                 <div className="rounded-xl border border-[var(--border-color)] bg-[var(--soft-surface)] p-5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Team ID</p>
-                  <p className="mt-1.5 break-all text-base font-semibold text-[var(--muted-text)]">{teamId ?? 'Not assigned'}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-text)]">Team</p>
+                  <p className="mt-1.5 text-base font-semibold">{teamName ?? 'Not assigned'}</p>
+                  {teamId && (
+                    <p className="mt-1 text-[10px] break-all opacity-60 font-mono">{teamId}</p>
+                  )}
                 </div>
               </>
             )}
