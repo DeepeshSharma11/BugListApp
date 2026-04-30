@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.services.email import send_support_email
-from app.services.llm import generate_support_draft
+from app.services.llm import generate_support_draft, generate_bug_enhancement
 
 class SupportTicketRequest(BaseModel):
     user_id: Optional[str] = None
@@ -88,6 +88,22 @@ def compute_fingerprint(title: str, description: str, environment: str) -> str:
     return hashlib.sha256(norm.encode("utf-8")).hexdigest()
 
 
+class BugEnhanceRequest(BaseModel):
+    raw_input: str
+
+
+@app.post("/api/bugs/ai-enhance")
+@limiter.limit("10/minute")
+def ai_enhance_bug(request: Request, payload: BugEnhanceRequest):
+    """Use LLM to convert rough user input into a structured bug report."""
+    if not payload.raw_input or len(payload.raw_input.strip()) < 10:
+        raise HTTPException(status_code=400, detail="raw_input too short (min 10 chars)")
+    result = generate_bug_enhancement(payload.raw_input.strip())
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
+
 @app.get("/api/bugs/check")
 @limiter.limit("30/minute")
 def check_duplicate(request: Request, title: str, description: str = "", environment: str = ""):
@@ -146,27 +162,33 @@ def list_bugs(
     # Cap per_page to reasonable maximum
     per_page = min(per_page, 100)
 
+    # Build base query with exact count
+    query = sb.table("bugs").select(
+        "id,title,severity,status,priority,submitted_by,team_id,created_at,category",
+        count="exact",
+    )
+    if submitted_by:
+        query = query.eq("submitted_by", submitted_by)
+    if team_id:
+        query = query.eq("team_id", team_id)
+    if status:
+        query = query.eq("status", status)
+    if severity:
+        query = query.eq("severity", severity)
+    if priority:
+        query = query.eq("priority", priority)
+    if category:
+        query = query.eq("category", category)
+
+    offset = (page - 1) * per_page
     try:
-        # Build base query and request exact count
-        query = sb.table("bugs").select(
-            "id,title,severity,status,priority,submitted_by,team_id,created_at,category",
-            count="exact",
-        )
-        if submitted_by:
-            query = query.eq("submitted_by", submitted_by)
-        if team_id:
-            query = query.eq("team_id", team_id)
-        if status:
-            query = query.eq("status", status)
-        if severity:
-            query = query.eq("severity", severity)
-        if priority:
-            query = query.eq("priority", priority)
-        if category:
-            query = query.eq("category", category)
-        offset = (page - 1) * per_page
         res = query.order("created_at", desc=True).range(offset, offset + per_page - 1).execute()
-    except Exception:
+    except Exception as exc:
+        # PGRST103: offset exceeds available rows — return empty page gracefully
+        exc_str = str(exc)
+        if "PGRST103" in exc_str or "Requested range not satisfiable" in exc_str:
+            logger.warning(f"Offset {offset} exceeds row count, returning empty page (PGRST103)")
+            return {"items": [], "total": 0, "page": page, "per_page": per_page, "total_pages": 1}
         logger.exception("Exception when listing bugs")
         raise HTTPException(status_code=500, detail="DB error")
 

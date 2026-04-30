@@ -16,13 +16,13 @@ type Member = {
 }
 
 /* ─── Constants ──────────────────────────────────────────────────── */
-const MEDAL       = ['🥇', '🥈', '🥉']
-const MEDAL_RING  = ['#f59e0b', '#94a3b8', '#cd7c3a']
-const MEDAL_BG    = ['rgba(251,191,36,0.13)', 'rgba(148,163,184,0.13)', 'rgba(205,124,58,0.13)']
+const MEDAL = ['🥇', '🥈', '🥉']
+const MEDAL_RING = ['#f59e0b', '#94a3b8', '#cd7c3a']
+const MEDAL_BG = ['rgba(251,191,36,0.13)', 'rgba(148,163,184,0.13)', 'rgba(205,124,58,0.13)']
 // Podium: silver(1) | gold(0) | bronze(2) — center is tallest
-const PODIUM_ORDER  = [1, 0, 2]
+const PODIUM_ORDER = [1, 0, 2]
 const PODIUM_HEIGHT = [104, 152, 84]   // px per podium block
-const AVATAR_SIZE   = [64, 80, 56]     // avatar px per slot
+const AVATAR_SIZE = [64, 80, 56]     // avatar px per slot
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 function rateColor(r: number) {
@@ -81,16 +81,37 @@ function Stat({ label, value, color }: { label: string; value: string | number; 
   )
 }
 
-import { LeaderboardRowSkeleton } from '../../components/Skeleton'
+function RowSkeleton() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 8px', borderRadius: 12,
+      background: 'var(--soft-surface)', marginBottom: 6,
+      animation: 'pulse 1.5s ease-in-out infinite',
+    }}>
+      <div style={{ width: 28, height: 16, borderRadius: 6, background: 'var(--border-color)' }} />
+      <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--border-color)', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ width: '50%', height: 12, borderRadius: 6, background: 'var(--border-color)', marginBottom: 5 }} />
+        <div style={{ width: '35%', height: 10, borderRadius: 6, background: 'var(--border-color)' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 16 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ width: 36, height: 28, borderRadius: 8, background: 'var(--border-color)' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /* ─── Podium Card (responsive-aware) ────────────────────────────── */
 function PodiumCard({
   member, slot, isMobile,
 }: { member: Member; slot: number; isMobile: boolean }) {
-  const ring  = MEDAL_RING[slot]
-  const bg    = MEDAL_BG[slot]
-  const ph    = isMobile ? [72, 90, 60][slot] : PODIUM_HEIGHT[slot]
-  const avSz  = isMobile ? [44, 52, 40][slot] : AVATAR_SIZE[slot]
+  const ring = MEDAL_RING[slot]
+  const bg = MEDAL_BG[slot]
+  const ph = isMobile ? [72, 90, 60][slot] : PODIUM_HEIGHT[slot]
+  const avSz = isMobile ? [44, 52, 40][slot] : AVATAR_SIZE[slot]
 
   return (
     <div style={{
@@ -142,12 +163,12 @@ function PodiumCard({
 
 /* ─── Main Component ─────────────────────────────────────────────── */
 export default function Leaderboard() {
-  const [members, setMembers]           = useState<Member[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState<string | null>(null)
-  const [teamName, setTeamName]         = useState<string | null>(null)
+  const [members, setMembers] = useState<Member[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [teamName, setTeamName] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isMobile, setIsMobile]         = useState(window.innerWidth < 640)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
 
   /* responsive hook */
   useEffect(() => {
@@ -163,7 +184,7 @@ export default function Leaderboard() {
       setLoading(true)
       setError(null)
       try {
-        const auth   = await getAuthState()
+        const auth = await getAuthState()
         const teamId = auth.profile?.team_id
         if (!teamId) {
           if (mounted) setError('Aapka profile kisi team mein assign nahi hai.')
@@ -208,8 +229,8 @@ export default function Leaderboard() {
   const podiumOrdered = isMobile
     ? podiumSlots.map((m, i) => ({ member: m, slot: i }))
     : PODIUM_ORDER
-        .map(slot => ({ member: podiumSlots[slot], slot }))
-        .filter(x => x.member)
+      .map(slot => ({ member: podiumSlots[slot], slot }))
+      .filter(x => x.member)
 
   const restMembers = members.slice(3)
 
@@ -302,7 +323,7 @@ export default function Leaderboard() {
         )}
 
         {/* Loading skeletons */}
-        {loading && [0, 1, 2, 3, 4].map(i => <LeaderboardRowSkeleton key={i} />)}
+        {loading && [0, 1, 2, 3, 4].map(i => <RowSkeleton key={i} />)}
 
         {/* Empty */}
         {!loading && !error && members.length === 0 && (
@@ -314,9 +335,9 @@ export default function Leaderboard() {
         {/* Member rows */}
         <div style={{ maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
           {!loading && members.map((m, idx) => {
-            const isMe   = m.user_id === currentUserId
+            const isMe = m.user_id === currentUserId
             const isTop3 = idx < 3
-            const rowBg  = isMe ? 'var(--accent-soft)' : isTop3 ? MEDAL_BG[idx] : 'transparent'
+            const rowBg = isMe ? 'var(--accent-soft)' : isTop3 ? MEDAL_BG[idx] : 'transparent'
             const rowBorder = isMe ? '1px solid var(--accent)' : '1px solid transparent'
 
             return (

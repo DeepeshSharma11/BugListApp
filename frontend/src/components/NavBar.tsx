@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getAuthState } from '../lib/auth';
 import { useTheme } from '../context/ThemeContext';
+import NotificationPanel from './NotificationPanel';
 
 /* ── Icons ─────────────────────────────────────────────── */
 const Icon = ({ d, size = 18 }: { d: string; size?: number }) => (
@@ -40,6 +41,7 @@ function AvatarBubble({ name, size = 32 }: { name: string | null; size?: number 
 export default function NavBar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [dropOpen, setDropOpen]     = useState(false);
+  const [notifOpen, setNotifOpen]   = useState(false);
   const [session, setSession]       = useState<any>(null);
   const [profile, setProfile]       = useState<{ full_name: string | null; email: string | null } | null>(null);
   const [isAdmin, setIsAdmin]       = useState(false);
@@ -211,13 +213,12 @@ export default function NavBar() {
 
           {/* ── Right: Theme + Profile dropdown ── */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
-            {/* Notifications (Icon Only) */}
+            {/* Notifications (Icon Only — opens slide panel) */}
             {session && (
-              <Link
-                to="/dashboard/notifications"
+              <button
+                onClick={() => setNotifOpen(o => !o)}
                 title="Notifications"
-                className={`relative w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150
-                           ${isActive('/dashboard/notifications') ? 'nav-pill-active' : 'nav-pill'}`}
+                className={`relative w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 nav-pill`}
                 style={{ border: '1px solid var(--border-color)' }}
               >
                 <Icon d={ICONS['Notifications']} size={17} />
@@ -227,7 +228,7 @@ export default function NavBar() {
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </Link>
+              </button>
             )}
 
             {/* Theme toggle */}
@@ -343,9 +344,9 @@ export default function NavBar() {
           {/* ── Mobile hamburger ── */}
           <div className="flex md:hidden items-center gap-2">
             {session && (
-              <Link to="/dashboard/notifications"
-                className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all
-                           ${isActive('/dashboard/notifications') ? 'nav-pill-active' : ''}`}
+              <button
+                onClick={() => { setNotifOpen(o => !o); setIsOpen(false); }}
+                className="relative w-9 h-9 rounded-lg flex items-center justify-center transition-all"
                 style={{ color: 'var(--muted-text)', border: '1px solid var(--border-color)' }}>
                 <Icon d={ICONS['Notifications']} size={18} />
                 {unreadCount > 0 && (
@@ -353,7 +354,7 @@ export default function NavBar() {
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </Link>
+              </button>
             )}
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -454,6 +455,13 @@ export default function NavBar() {
           </div>
         </div>
       )}
+
+      {/* Notification slide-in panel */}
+      <NotificationPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onUnreadCountChange={(c) => setUnreadCount(c)}
+      />
     </header>
   );
 }

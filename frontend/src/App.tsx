@@ -8,7 +8,7 @@ import MyBugs from './pages/dashboard/MyBugs'
 import TeamBugs from './pages/dashboard/TeamBugs'
 import BugDetail from './pages/dashboard/BugDetail'
 import Profile from './pages/dashboard/Profile'
-import Notifications from './pages/dashboard/Notifications'
+
 import Leaderboard from './pages/dashboard/Leaderboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminSupport from './pages/admin/AdminSupport'
@@ -60,7 +60,7 @@ export default function App() {
               <Route path="my-bugs" element={<MyBugs />} />
               <Route path="team" element={<TeamBugs />} />
               <Route path="leaderboard" element={<Leaderboard />} />
-              <Route path="notifications" element={<Notifications />} />
+
               <Route path="bugs/:id" element={<BugDetail />} />
               <Route path="profile" element={<Profile />} />
               <Route path="privacy" element={<PrivacyPolicy />} />
